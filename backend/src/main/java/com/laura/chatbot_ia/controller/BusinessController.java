@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 
 // Indica que esta clase recibe peticiones HTTP y devuelve respuestas REST.
 @RestController
@@ -27,6 +28,13 @@ public class BusinessController {
     @GetMapping
     public List<Business> findAll() {
         return businessService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Business> findById(@PathVariable Long id) {
+        return businessService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // POST /api/businesses
