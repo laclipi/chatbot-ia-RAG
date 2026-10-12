@@ -49,4 +49,19 @@ public class GlobalExceptionHandler {
 
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
         }
+
+        @ExceptionHandler(OfferedServiceNotFoundException.class)
+        public ResponseEntity<ApiError> handleOfferedServiceNotFound(
+                        OfferedServiceNotFoundException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                HttpStatus.NOT_FOUND.value(),
+                                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                                exception.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
+        }
+
 }
