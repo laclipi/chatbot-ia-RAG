@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
 
 // Indica que esta clase representa una entidad persistente de JPA.
 
@@ -28,6 +29,7 @@ public class Business {
     private String name;
 
     // Correo de contacto del negocio.
+    @Email(message = "El correo electrónico no tiene un formato válido")
     @Column(length = 150)
     private String contactEmail;
 
