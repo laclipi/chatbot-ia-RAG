@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 
 // Indica que esta clase recibe peticiones HTTP y devuelve respuestas REST.
 @RestController
@@ -41,7 +42,7 @@ public class BusinessController {
     // Recibe un negocio en formato JSON y lo guarda en PostgreSQL.
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Business create(@RequestBody Business business) {
+    public Business create(@Valid @RequestBody Business business) {
         return businessService.save(business);
     }
 }

@@ -7,8 +7,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 
 // Indica que esta clase representa una entidad persistente de JPA.
+
 @Entity
 
 // Define el nombre de la tabla en PostgreSQL.
@@ -20,7 +22,8 @@ public class Business {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Nombre obligatorio, con un máximo de 150 caracteres.
+    // Nombre obligatorio, con un máximo de 150 caracteres.jakarta validation
+    @NotBlank
     @Column(nullable = false, length = 150)
     private String name;
 
