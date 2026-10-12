@@ -8,6 +8,7 @@ import com.laura.chatbot_ia.repository.OfferedServiceRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import com.laura.chatbot_ia.exception.BusinessNotFoundException;
 
 @Service
 public class OfferedServiceManager {
@@ -24,9 +25,9 @@ public class OfferedServiceManager {
 
     // Devuelve los servicios de un negocio, si este existe.
     public List<OfferedService> findByBusinessId(Long businessId) {
+
         if (!businessRepository.existsById(businessId)) {
-            throw new IllegalArgumentException(
-                    "No existe un negocio con ID " + businessId);
+            throw new BusinessNotFoundException(businessId);
         }
 
         return offeredServiceRepository.findByBusinessId(businessId);
@@ -35,8 +36,7 @@ public class OfferedServiceManager {
     // Comprueba el negocio y asocia el servicio antes de guardarlo.
     public OfferedService create(Long businessId, OfferedService offeredService) {
         Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No existe un negocio con ID " + businessId));
+                .orElseThrow(() -> new BusinessNotFoundException(businessId));
 
         offeredService.setBusiness(business);
 
