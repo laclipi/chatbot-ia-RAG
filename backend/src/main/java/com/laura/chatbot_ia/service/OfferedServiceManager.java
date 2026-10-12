@@ -42,4 +42,22 @@ public class OfferedServiceManager {
 
         return offeredServiceRepository.save(offeredService);
     }
+
+    // Busca un servicio por su ID y comprueba que pertenece al negocio indicado.
+    public OfferedService findByIdAndBusinessId(Long serviceId, Long businessId) {
+
+        // Comprobamos primero que el negocio exista.
+        if (!businessRepository.existsById(businessId)) {
+            throw new BusinessNotFoundException(businessId);
+        }
+
+        // Buscamos el servicio dentro del negocio concreto.
+        // Si no existe o pertenece a otro negocio, devolvemos un error 404.
+        return offeredServiceRepository
+                .findByIdAndBusinessId(serviceId, businessId)
+                .orElseThrow(() -> new com.laura.chatbot_ia.exception.OfferedServiceNotFoundException(
+                        serviceId,
+                        businessId));
+    }
+
 }
