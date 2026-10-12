@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 
 // Indica que esta clase representa una entidad persistente de JPA.
 
@@ -25,6 +26,7 @@ public class Business {
 
     // Nombre obligatorio, con un máximo de 150 caracteres.jakarta validation
     @NotBlank
+    @Size(max = 150, message = "El nombre no puede superar los 150 caracteres")
     @Column(nullable = false, length = 150)
     private String name;
 
