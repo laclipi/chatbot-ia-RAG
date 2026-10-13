@@ -149,4 +149,23 @@ class OfferedServiceManagerTest {
                 () -> offeredServiceManager.update(businessId, serviceId, updatedData));
     }
 
+    // Comprobamos que el gestor guarda y devuelve un nuevo servicio.
+    @Test
+    void createSavesAndReturnsOfferedService() {
+        Long businessId = 1L;
+
+        OfferedService service = new OfferedService();
+        service.setName("Consulta inicial");
+
+        // Simulamos que el negocio existe y que el repositorio lo devuelve.
+        when(businessRepository.findById(businessId))
+                .thenReturn(java.util.Optional.of(new com.laura.chatbot_ia.entity.Business()));
+        when(offeredServiceRepository.save(service)).thenReturn(service);
+
+        OfferedService result = offeredServiceManager.create(businessId, service);
+
+        assertSame(service, result);
+        verify(offeredServiceRepository).save(service);
+    }
+
 }
