@@ -30,7 +30,8 @@ public class OfferedServiceManager {
             throw new BusinessNotFoundException(businessId);
         }
 
-        return offeredServiceRepository.findByBusinessId(businessId);
+        // Devolvemos solo los servicios activos para el catálogo del chatbot.
+        return offeredServiceRepository.findByBusinessIdAndActiveTrue(businessId);
     }
 
     // Comprueba el negocio y asocia el servicio antes de guardarlo.

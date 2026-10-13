@@ -8,13 +8,16 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OfferedServiceRepository
-        extends JpaRepository<OfferedService, Long> {
+                extends JpaRepository<OfferedService, Long> {
 
-    // Busca los servicios que pertenecen a un negocio concreto.
-    List<OfferedService> findByBusinessId(Long businessId);
+        // Busca los servicios que pertenecen a un negocio concreto.
+        List<OfferedService> findByBusinessId(Long businessId);
 
-    // Busca un servicio solo si pertenece al negocio indicado.
-    Optional<OfferedService> findByIdAndBusinessId(
-            Long id,
-            Long businessId);
+        // Busca un servicio solo si pertenece al negocio indicado.
+        Optional<OfferedService> findByIdAndBusinessId(
+                        Long id,
+                        Long businessId);
+
+        // Devuelve únicamente los servicios activos de un negocio.
+        List<OfferedService> findByBusinessIdAndActiveTrue(Long businessId);
 }
