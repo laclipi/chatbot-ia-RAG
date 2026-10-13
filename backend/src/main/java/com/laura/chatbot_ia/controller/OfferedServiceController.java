@@ -37,7 +37,7 @@ public class OfferedServiceController {
     }
 
     // Obtiene un servicio concreto, verificando que pertenece al negocio indicado.
-    @GetMapping("/{serviceId}")
+    @GetMapping("/id/{serviceId}")
     public OfferedService findByIdAndBusinessId(
             @PathVariable Long businessId,
             @PathVariable Long serviceId) {
@@ -84,6 +84,15 @@ public class OfferedServiceController {
                 businessId,
                 serviceId,
                 active);
+    }
+
+    // Devuelve únicamente los servicios activos del negocio indicado.
+    @GetMapping("/active")
+    public List<OfferedService> findActiveByBusinessId(
+            @PathVariable Long businessId) {
+
+        // Reutilizamos la lógica existente que filtra los servicios activos.
+        return offeredServiceManager.findByBusinessId(businessId);
     }
 
 }
