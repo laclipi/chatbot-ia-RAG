@@ -221,4 +221,21 @@ class OfferedServiceManagerTest {
                 org.mockito.Mockito.never()).findByIdAndBusinessId(serviceId, businessId);
     }
 
+    // Comprobamos que el gestor elimina el servicio que pertenece al negocio.
+    @Test
+    void deleteRemovesExistingService() {
+        Long businessId = 1L;
+        Long serviceId = 2L;
+
+        OfferedService service = new OfferedService();
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(java.util.Optional.of(service));
+
+        offeredServiceManager.delete(businessId, serviceId);
+
+        org.mockito.Mockito.verify(offeredServiceRepository).delete(service);
+    }
+
 }
