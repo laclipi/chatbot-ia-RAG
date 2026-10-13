@@ -188,4 +188,20 @@ class OfferedServiceManagerTest {
                 .save(service);
     }
 
+    // Comprobamos que no se pueden consultar servicios de un negocio inexistente.
+    @Test
+    void findByBusinessIdThrowsExceptionWhenBusinessDoesNotExist() {
+        Long businessId = 99L;
+
+        when(businessRepository.existsById(businessId)).thenReturn(false);
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.laura.chatbot_ia.exception.BusinessNotFoundException.class,
+                () -> offeredServiceManager.findByBusinessId(businessId));
+
+        org.mockito.Mockito.verify(
+                offeredServiceRepository,
+                org.mockito.Mockito.never()).findByBusinessIdAndActiveTrue(businessId);
+    }
+
 }
