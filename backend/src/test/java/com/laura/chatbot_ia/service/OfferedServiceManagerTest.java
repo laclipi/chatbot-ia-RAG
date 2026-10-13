@@ -168,4 +168,24 @@ class OfferedServiceManagerTest {
         verify(offeredServiceRepository).save(service);
     }
 
+    // Comprobamos que crear un servicio para un negocio inexistente lanza una
+    // excepción.
+    @Test
+    void createThrowsExceptionWhenBusinessDoesNotExist() {
+        Long businessId = 99L;
+
+        OfferedService service = new OfferedService();
+        service.setName("Consulta inicial");
+
+        when(businessRepository.findById(businessId))
+                .thenReturn(java.util.Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.laura.chatbot_ia.exception.BusinessNotFoundException.class,
+                () -> offeredServiceManager.create(businessId, service));
+
+        org.mockito.Mockito.verify(offeredServiceRepository, org.mockito.Mockito.never())
+                .save(service);
+    }
+
 }
