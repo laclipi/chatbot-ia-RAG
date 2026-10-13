@@ -60,4 +60,26 @@ public class OfferedServiceManager {
                         businessId));
     }
 
+    // Actualiza los datos de un servicio sin modificar su ID ni su negocio
+    // asociado.
+    public OfferedService update(
+            Long businessId,
+            Long serviceId,
+            OfferedService updatedService) {
+
+        // Recuperamos el servicio existente y verificamos que pertenece al negocio.
+        OfferedService existingService = findByIdAndBusinessId(serviceId, businessId);
+
+        // Actualizamos únicamente los campos editables del servicio.
+        existingService.setName(updatedService.getName());
+        existingService.setDescription(updatedService.getDescription());
+        existingService.setPrice(updatedService.getPrice());
+        existingService.setDurationMinutes(updatedService.getDurationMinutes());
+        existingService.setActive(updatedService.isActive());
+
+        // Guardamos los cambios en la base de datos y devolvemos el servicio
+        // actualizado.
+        return offeredServiceRepository.save(existingService);
+    }
+
 }

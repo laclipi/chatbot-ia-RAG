@@ -47,4 +47,18 @@ public class OfferedServiceController {
                 businessId);
     }
 
+    // Actualiza un servicio concreto del negocio indicado.
+    @PutMapping("/{serviceId}")
+    public OfferedService update(
+            @PathVariable Long businessId,
+            @PathVariable Long serviceId,
+            @Valid @RequestBody OfferedService updatedService) {
+
+        // Delegamos la validación y la actualización en la capa de servicio.
+        return offeredServiceManager.update(
+                businessId,
+                serviceId,
+                updatedService);
+    }
+
 }
