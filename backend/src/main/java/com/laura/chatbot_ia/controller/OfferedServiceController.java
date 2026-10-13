@@ -72,4 +72,18 @@ public class OfferedServiceController {
         offeredServiceManager.delete(businessId, serviceId);
     }
 
+    // Cambia el estado activo de un servicio sin modificar sus otros datos.
+    @PatchMapping("/{serviceId}/active")
+    public OfferedService changeActiveStatus(
+            @PathVariable Long businessId,
+            @PathVariable Long serviceId,
+            @RequestParam boolean active) {
+
+        // Delegamos la comprobación y el cambio de estado en el servicio.
+        return offeredServiceManager.changeActiveStatus(
+                businessId,
+                serviceId,
+                active);
+    }
+
 }

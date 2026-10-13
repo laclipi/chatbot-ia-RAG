@@ -92,4 +92,20 @@ public class OfferedServiceManager {
         offeredServiceRepository.delete(existingService);
     }
 
+    // Activa o desactiva un servicio sin eliminarlo de la base de datos.
+    public OfferedService changeActiveStatus(
+            Long businessId,
+            Long serviceId,
+            boolean active) {
+
+        // Comprobamos que el servicio existe y pertenece al negocio indicado.
+        OfferedService existingService = findByIdAndBusinessId(serviceId, businessId);
+
+        // Modificamos únicamente su estado, conservando el resto de los datos.
+        existingService.setActive(active);
+
+        // Guardamos el cambio y devolvemos el servicio actualizado.
+        return offeredServiceRepository.save(existingService);
+    }
+
 }
