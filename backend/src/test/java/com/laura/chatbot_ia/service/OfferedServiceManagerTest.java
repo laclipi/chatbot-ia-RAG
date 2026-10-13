@@ -66,4 +66,24 @@ class OfferedServiceManagerTest {
                 .findByBusinessIdAndActiveTrue(businessId);
     }
 
+    // Comprobamos que el gestor guarda el servicio con el estado inactivo.
+    @Test
+    void changeActiveStatusDeactivatesService() {
+        Long businessId = 1L;
+        Long serviceId = 2L;
+
+        OfferedService service = new OfferedService();
+        service.setActive(true);
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(java.util.Optional.of(service));
+        when(offeredServiceRepository.save(service)).thenReturn(service);
+
+        OfferedService result = offeredServiceManager.changeActiveStatus(businessId, serviceId, false);
+
+        assertEquals(false, result.isActive());
+        verify(offeredServiceRepository).save(service);
+    }
+
 }
