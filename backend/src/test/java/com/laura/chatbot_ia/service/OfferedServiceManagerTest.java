@@ -1,6 +1,8 @@
 package com.laura.chatbot_ia.service;
 
 import com.laura.chatbot_ia.entity.OfferedService;
+import com.laura.chatbot_ia.exception.OfferedServiceNotFoundException;
+
 import com.laura.chatbot_ia.repository.BusinessRepository;
 import com.laura.chatbot_ia.repository.OfferedServiceRepository;
 import com.laura.chatbot_ia.service.OfferedServiceManager;
@@ -127,6 +129,24 @@ class OfferedServiceManagerTest {
 
         assertEquals("Servicio actualizado", result.getName());
         verify(offeredServiceRepository).save(existingService);
+    }
+
+    // Comprobamos que actualizar un servicio inexistente provoca una excepción.
+    @Test
+    void updateThrowsExceptionWhenServiceDoesNotExistForBusiness() {
+        Long businessId = 1L;
+        Long serviceId = 99L;
+
+        OfferedService updatedData = new OfferedService();
+        updatedData.setName("Servicio actualizado");
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(java.util.Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                OfferedServiceNotFoundException.class,
+                () -> offeredServiceManager.update(businessId, serviceId, updatedData));
     }
 
 }
