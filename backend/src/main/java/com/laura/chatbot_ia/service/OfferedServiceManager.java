@@ -82,4 +82,14 @@ public class OfferedServiceManager {
         return offeredServiceRepository.save(existingService);
     }
 
+    // Elimina un servicio únicamente si pertenece al negocio indicado.
+    public void delete(Long businessId, Long serviceId) {
+
+        // Comprobamos que el servicio existe dentro de ese negocio.
+        OfferedService existingService = findByIdAndBusinessId(serviceId, businessId);
+
+        // Eliminamos el servicio de la base de datos.
+        offeredServiceRepository.delete(existingService);
+    }
+
 }

@@ -61,4 +61,15 @@ public class OfferedServiceController {
                 updatedService);
     }
 
+    // Elimina un servicio concreto del negocio indicado.
+    @DeleteMapping("/{serviceId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @PathVariable Long businessId,
+            @PathVariable Long serviceId) {
+
+        // Delegamos la eliminación y las comprobaciones en la capa de servicio.
+        offeredServiceManager.delete(businessId, serviceId);
+    }
+
 }
