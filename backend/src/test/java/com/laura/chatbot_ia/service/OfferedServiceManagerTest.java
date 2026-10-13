@@ -106,4 +106,27 @@ class OfferedServiceManagerTest {
         verify(offeredServiceRepository).save(service);
     }
 
+    // Comprobamos que el gestor actualiza los datos y guarda el servicio existente.
+    @Test
+    void updateChangesServiceDataAndSavesIt() {
+        Long businessId = 1L;
+        Long serviceId = 2L;
+
+        OfferedService existingService = new OfferedService();
+        existingService.setName("Servicio antiguo");
+
+        OfferedService updatedData = new OfferedService();
+        updatedData.setName("Servicio actualizado");
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(java.util.Optional.of(existingService));
+        when(offeredServiceRepository.save(existingService)).thenReturn(existingService);
+
+        OfferedService result = offeredServiceManager.update(businessId, serviceId, updatedData);
+
+        assertEquals("Servicio actualizado", result.getName());
+        verify(offeredServiceRepository).save(existingService);
+    }
+
 }
