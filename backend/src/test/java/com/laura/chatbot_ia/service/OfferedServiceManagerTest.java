@@ -48,4 +48,22 @@ class OfferedServiceManagerTest {
         verify(offeredServiceRepository)
                 .findByBusinessIdAndActiveTrue(businessId);
     }
+
+    // Comprobamos que el listado no devuelve servicios cuando no hay ninguno
+    // activo.
+    @Test
+    void findByBusinessIdReturnsEmptyListWhenNoActiveServicesExist() {
+        Long businessId = 1L;
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByBusinessIdAndActiveTrue(businessId))
+                .thenReturn(List.of());
+
+        List<OfferedService> result = offeredServiceManager.findByBusinessId(businessId);
+
+        assertEquals(0, result.size());
+        verify(offeredServiceRepository)
+                .findByBusinessIdAndActiveTrue(businessId);
+    }
+
 }
