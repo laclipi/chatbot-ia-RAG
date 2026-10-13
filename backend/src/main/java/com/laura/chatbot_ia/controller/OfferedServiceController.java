@@ -35,4 +35,16 @@ public class OfferedServiceController {
             @Valid @RequestBody OfferedService offeredService) {
         return offeredServiceManager.create(businessId, offeredService);
     }
+
+    // Obtiene un servicio concreto, verificando que pertenece al negocio indicado.
+    @GetMapping("/{serviceId}")
+    public OfferedService findByIdAndBusinessId(
+            @PathVariable Long businessId,
+            @PathVariable Long serviceId) {
+
+        return offeredServiceManager.findByIdAndBusinessId(
+                serviceId,
+                businessId);
+    }
+
 }
