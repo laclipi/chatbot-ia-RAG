@@ -238,4 +238,23 @@ class OfferedServiceManagerTest {
         org.mockito.Mockito.verify(offeredServiceRepository).delete(service);
     }
 
+    // Comprobamos que eliminar un servicio inexistente lanza una excepción.
+    @Test
+    void deleteThrowsExceptionWhenServiceDoesNotExist() {
+        Long businessId = 1L;
+        Long serviceId = 99L;
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(java.util.Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                OfferedServiceNotFoundException.class,
+                () -> offeredServiceManager.delete(businessId, serviceId));
+
+        org.mockito.Mockito.verify(
+                offeredServiceRepository,
+                org.mockito.Mockito.never()).delete(org.mockito.ArgumentMatchers.any(OfferedService.class));
+    }
+
 }
