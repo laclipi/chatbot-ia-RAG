@@ -115,4 +115,26 @@ class OfferedServiceControllerTest {
                         .value("/api/businesses/1/services/id/99"));
     }
 
+    // Comprobamos que enviar un servicio sin nombre devuelve HTTP 400.
+    @Test
+    void createReturnsBadRequestWhenNameIsBlank() throws Exception {
+
+        // Enviamos un JSON que incumple la validación @NotBlank del nombre.
+        mockMvc.perform(post("/api/businesses/{businessId}/services", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": " ",
+                          "description": "Primera consulta",
+                          "price": 35.00,
+                          "durationMinutes": 30,
+                          "active": true
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("El nombre del servicio es obligatorio"));
+    }
+
 }
