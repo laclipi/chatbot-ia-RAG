@@ -28,6 +28,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import org.springframework.http.MediaType;
 
+// Permite construir peticiones HTTP PUT para probar la actualización.
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+
 // Cargamos únicamente el controlador y simulamos su dependencia.
 @WebMvcTest(OfferedServiceController.class)
 class OfferedServiceControllerTest {
@@ -135,6 +138,54 @@ class OfferedServiceControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message")
                         .value("El nombre del servicio es obligatorio"));
+    }
+
+    // Comprobamos que actualizar un servicio devuelve HTTP 200 y los datos nuevos.
+    @Test
+    void updateReturnsOkAndUpdatedService() throws Exception {
+        Long businessId = 1L;
+        Long serviceId = 10L;
+
+        // Simulamos el servicio que devuelve el gestor tras actualizarlo.
+        OfferedService updatedService = new OfferedService();
+        updatedService.setName("Consulta avanzada");
+        updatedService.setDescription("Consulta de seguimiento");
+        updatedService.setPrice(new java.math.BigDecimal("50.00"));
+        updatedService.setDurationMinutes(45);
+        updatedService.setActive(true);
+
+        when(offeredServiceManager.update(
+                eq(businessId),
+                eq(serviceId),
+                any(OfferedService.class)))
+                .thenReturn(updatedService);
+
+        // Enviamos un PUT con los nuevos datos del servicio.
+        mockMvc.perform(put(
+                "/api/businesses/{businessId}/services/{serviceId}",
+                businessId,
+                serviceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "Consulta avanzada",
+                          "description": "Consulta de seguimiento",
+                          "price": 50.00,
+                          "durationMinutes": 45,
+                          "active": true
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Consulta avanzada"))
+                .andExpect(jsonPath("$.description").value("Consulta de seguimiento"))
+                .andExpect(jsonPath("$.price").value(50.00))
+                .andExpect(jsonPath("$.durationMinutes").value(45));
+
+        // Verificamos que el controlador delega la actualización al gestor.
+        verify(offeredServiceManager).update(
+                eq(businessId),
+                eq(serviceId),
+                any(OfferedService.class));
     }
 
 }
