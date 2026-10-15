@@ -31,6 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import org.springframework.http.MediaType;
 
+// Permite construir peticiones HTTP PATCH para cambiar el estado del servicio.
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
 // Permite construir peticiones HTTP PUT para probar la actualización.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
@@ -214,6 +217,38 @@ class OfferedServiceControllerTest {
 
         // Verificamos que el controlador delega la eliminación al gestor.
         verify(offeredServiceManager).delete(businessId, serviceId);
+    }
+
+    // Comprobamos que desactivar un servicio devuelve HTTP 200 y active=false.
+    @Test
+    void changeActiveStatusReturnsOkAndInactiveService() throws Exception {
+        Long businessId = 1L;
+        Long serviceId = 10L;
+
+        // Simulamos el servicio devuelto por el gestor tras desactivarlo.
+        OfferedService inactiveService = new OfferedService();
+        inactiveService.setName("Consulta inicial");
+        inactiveService.setDescription("Primera consulta");
+        inactiveService.setPrice(new java.math.BigDecimal("35.00"));
+        inactiveService.setDurationMinutes(30);
+        inactiveService.setActive(false);
+
+        when(offeredServiceManager.changeActiveStatus(businessId, serviceId, false))
+                .thenReturn(inactiveService);
+
+        // Enviamos PATCH con el parámetro active=false.
+        mockMvc.perform(patch(
+                "/api/businesses/{businessId}/services/{serviceId}/active",
+                businessId,
+                serviceId)
+                .param("active", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Consulta inicial"))
+                .andExpect(jsonPath("$.active").value(false));
+
+        // Verificamos que el controlador delega el cambio de estado al gestor.
+        verify(offeredServiceManager)
+                .changeActiveStatus(businessId, serviceId, false);
     }
 
 }
