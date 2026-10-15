@@ -17,6 +17,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Permiten construir el JSON de entrada y simular la respuesta del gestor.
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import org.springframework.http.MediaType;
+
 // Cargamos únicamente el controlador y simulamos su dependencia.
 @WebMvcTest(OfferedServiceController.class)
 class OfferedServiceControllerTest {
@@ -41,5 +49,43 @@ class OfferedServiceControllerTest {
                 .andExpect(jsonPath("$.length()").value(0));
 
         verify(offeredServiceManager).findByBusinessId(businessId);
+    }
+
+    // Comprobamos que crear un servicio devuelve HTTP 201 y los datos en JSON.
+    @Test
+    void createReturnsCreatedAndJsonService() throws Exception {
+        Long businessId = 1L;
+
+        // Simulamos el servicio creado que devolvería el gestor.
+        OfferedService createdService = new OfferedService();
+        createdService.setName("Consulta inicial");
+        createdService.setDescription("Primera consulta");
+        createdService.setPrice(new java.math.BigDecimal("35.00"));
+        createdService.setDurationMinutes(30);
+        createdService.setActive(true);
+
+        when(offeredServiceManager.create(eq(businessId), any(OfferedService.class)))
+                .thenReturn(createdService);
+
+        // Enviamos una petición POST con los campos obligatorios del servicio.
+        mockMvc.perform(post("/api/businesses/{businessId}/services", businessId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "Consulta inicial",
+                          "description": "Primera consulta",
+                          "price": 35.00,
+                          "durationMinutes": 30,
+                          "active": true
+                        }
+                        """))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Consulta inicial"))
+                .andExpect(jsonPath("$.price").value(35.00))
+                .andExpect(jsonPath("$.durationMinutes").value(30));
+
+        // Verificamos que el controlador delega la creación al gestor.
+        verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
     }
 }
