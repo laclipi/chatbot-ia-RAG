@@ -28,7 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+
 import org.springframework.http.MediaType;
 
 // Permite construir peticiones HTTP PATCH para cambiar el estado del servicio.
@@ -281,6 +281,40 @@ class OfferedServiceControllerTest {
 
         // Verificamos que el controlador delega la consulta al gestor.
         verify(offeredServiceManager).findByBusinessId(businessId);
+    }
+
+    // Comprobamos que consultar un servicio existente devuelve HTTP 200 y sus
+    // datos.
+    @Test
+    void findByIdAndBusinessIdReturnsOkAndService() throws Exception {
+        Long businessId = 1L;
+        Long serviceId = 10L;
+
+        // Simulamos el servicio que devuelve el gestor para esos identificadores.
+        OfferedService service = new OfferedService();
+        service.setName("Consulta inicial");
+        service.setDescription("Primera consulta");
+        service.setPrice(new java.math.BigDecimal("35.00"));
+        service.setDurationMinutes(30);
+        service.setActive(true);
+
+        when(offeredServiceManager.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(service);
+
+        // Consultamos el servicio y verificamos la respuesta JSON.
+        mockMvc.perform(get(
+                "/api/businesses/{businessId}/services/id/{serviceId}",
+                businessId,
+                serviceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Consulta inicial"))
+                .andExpect(jsonPath("$.description").value("Primera consulta"))
+                .andExpect(jsonPath("$.price").value(35.00))
+                .andExpect(jsonPath("$.durationMinutes").value(30))
+                .andExpect(jsonPath("$.active").value(true));
+
+        // Verificamos que el controlador delega la consulta al gestor.
+        verify(offeredServiceManager).findByIdAndBusinessId(serviceId, businessId);
     }
 
 }
