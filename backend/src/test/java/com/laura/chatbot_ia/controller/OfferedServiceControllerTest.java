@@ -17,6 +17,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Permiten simular una excepción del gestor y comprobar la respuesta HTTP.
+import com.laura.chatbot_ia.exception.OfferedServiceNotFoundException;
+
 // Permiten construir el JSON de entrada y simular la respuesta del gestor.
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -88,4 +91,28 @@ class OfferedServiceControllerTest {
         // Verificamos que el controlador delega la creación al gestor.
         verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
     }
+
+    // Verificamos que un servicio inexistente se traduce en HTTP 404 y un ApiError.
+    @Test
+    void findByIdAndBusinessIdReturnsNotFoundWhenServiceDoesNotExist() throws Exception {
+        Long businessId = 1L;
+        Long serviceId = 99L;
+
+        // Simulamos el error que lanzaría el gestor al no encontrar el servicio.
+        when(offeredServiceManager.findByIdAndBusinessId(serviceId, businessId))
+                .thenThrow(new OfferedServiceNotFoundException(serviceId, businessId));
+
+        // Solicitamos el servicio y comprobamos el estado y los datos del error.
+        mockMvc.perform(get(
+                "/api/businesses/{businessId}/services/id/{serviceId}",
+                businessId,
+                serviceId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message")
+                        .value("No existe un servicio con ID 99 para el negocio con ID 1"))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/businesses/1/services/id/99"));
+    }
+
 }
