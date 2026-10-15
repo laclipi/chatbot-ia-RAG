@@ -17,6 +17,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Imports necesarios para la petición DELETE y su respuesta sin cuerpo.
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+
 // Permiten simular una excepción del gestor y comprobar la respuesta HTTP.
 import com.laura.chatbot_ia.exception.OfferedServiceNotFoundException;
 
@@ -186,6 +189,31 @@ class OfferedServiceControllerTest {
                 eq(businessId),
                 eq(serviceId),
                 any(OfferedService.class));
+    }
+
+    // Comprobamos que eliminar un servicio devuelve HTTP 204 sin cuerpo de
+    // respuesta.
+    @Test
+    void deleteReturnsNoContent() throws Exception {
+        Long businessId = 1L;
+        Long serviceId = 10L;
+
+        // Simulamos que el gestor elimina el servicio sin lanzar ninguna excepción.
+        org.mockito.Mockito.doNothing()
+                .when(offeredServiceManager)
+                .delete(businessId, serviceId);
+
+        // Enviamos la petición DELETE y verificamos que la respuesta no tiene
+        // contenido.
+        mockMvc.perform(delete(
+                "/api/businesses/{businessId}/services/{serviceId}",
+                businessId,
+                serviceId))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        // Verificamos que el controlador delega la eliminación al gestor.
+        verify(offeredServiceManager).delete(businessId, serviceId);
     }
 
 }
