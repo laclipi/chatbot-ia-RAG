@@ -251,4 +251,36 @@ class OfferedServiceControllerTest {
                 .changeActiveStatus(businessId, serviceId, false);
     }
 
+    // Comprobamos que el endpoint de servicios activos devuelve HTTP 200 y una
+    // lista JSON.
+    @Test
+    void findActiveByBusinessIdReturnsOkAndJsonArray() throws Exception {
+        Long businessId = 1L;
+
+        // Simulamos que el gestor devuelve un servicio activo.
+        OfferedService activeService = new OfferedService();
+        activeService.setName("Consulta inicial");
+        activeService.setDescription("Primera consulta");
+        activeService.setPrice(new java.math.BigDecimal("35.00"));
+        activeService.setDurationMinutes(30);
+        activeService.setActive(true);
+
+        when(offeredServiceManager.findByBusinessId(businessId))
+                .thenReturn(List.of(activeService));
+
+        // Consultamos el endpoint y verificamos que devuelve una lista con un servicio
+        // activo.
+        mockMvc.perform(get(
+                "/api/businesses/{businessId}/services/active",
+                businessId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Consulta inicial"))
+                .andExpect(jsonPath("$[0].active").value(true));
+
+        // Verificamos que el controlador delega la consulta al gestor.
+        verify(offeredServiceManager).findByBusinessId(businessId);
+    }
+
 }
