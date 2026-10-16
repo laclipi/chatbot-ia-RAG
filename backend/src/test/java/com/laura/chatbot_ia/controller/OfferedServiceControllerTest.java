@@ -169,6 +169,28 @@ class OfferedServiceControllerTest {
                         .value("El precio no puede ser negativo"));
     }
 
+    // Comprobamos que crear un servicio con duración cero devuelve HTTP 400.
+    @Test
+    void createReturnsBadRequestWhenDurationIsZero() throws Exception {
+
+        // Enviamos una duración que incumple la validación @Min(1) de la entidad.
+        mockMvc.perform(post("/api/businesses/{businessId}/services", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "Consulta inicial",
+                          "description": "Primera consulta",
+                          "price": 35.00,
+                          "durationMinutes": 0,
+                          "active": true
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("La duración debe ser de al menos 1 minuto"));
+    }
+
     // Comprobamos que actualizar un servicio sin nombre devuelve HTTP 400.
     @Test
     void updateReturnsBadRequestWhenNameIsBlank() throws Exception {
