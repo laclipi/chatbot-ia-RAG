@@ -146,6 +146,29 @@ class OfferedServiceControllerTest {
                         .value("El nombre del servicio es obligatorio"));
     }
 
+    // Comprobamos que crear un servicio con precio negativo devuelve HTTP 400.
+    @Test
+    void createReturnsBadRequestWhenPriceIsNegative() throws Exception {
+
+        // Enviamos un JSON cuyo precio incumple la validación @DecimalMin de la
+        // entidad.
+        mockMvc.perform(post("/api/businesses/{businessId}/services", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "Consulta inicial",
+                          "description": "Primera consulta",
+                          "price": -5.00,
+                          "durationMinutes": 30,
+                          "active": true
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("El precio no puede ser negativo"));
+    }
+
     // Comprobamos que actualizar un servicio sin nombre devuelve HTTP 400.
     @Test
     void updateReturnsBadRequestWhenNameIsBlank() throws Exception {
