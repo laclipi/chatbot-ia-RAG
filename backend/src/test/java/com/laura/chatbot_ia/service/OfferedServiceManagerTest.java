@@ -149,6 +149,32 @@ class OfferedServiceManagerTest {
                 () -> offeredServiceManager.update(businessId, serviceId, updatedData));
     }
 
+    // Comprobamos que no se puede actualizar un servicio que no pertenece al
+    // negocio indicado.
+    @Test
+    void updateThrowsExceptionWhenServiceDoesNotBelongToBusiness() {
+        Long businessId = 1L;
+        Long serviceId = 99L;
+
+        OfferedService updatedData = new OfferedService();
+        updatedData.setName("Intento de modificación");
+
+        // Simulamos que la búsqueda conjunta no encuentra el servicio en ese negocio.
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(java.util.Optional.empty());
+
+        // Verificamos que se lanza una excepción y no se guarda ninguna modificación.
+        org.junit.jupiter.api.Assertions.assertThrows(
+                OfferedServiceNotFoundException.class,
+                () -> offeredServiceManager.update(businessId, serviceId, updatedData));
+
+        org.mockito.Mockito.verify(
+                offeredServiceRepository,
+                org.mockito.Mockito.never())
+                .save(org.mockito.ArgumentMatchers.any(OfferedService.class));
+    }
+
     // Comprobamos que el gestor guarda y devuelve un nuevo servicio.
     @Test
     void createSavesAndReturnsOfferedService() {
