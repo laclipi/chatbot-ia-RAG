@@ -83,9 +83,8 @@ public class OfferedServiceController {
 
     // Obtiene un servicio concreto, verificando que pertenece al negocio indicado.
 
-    // Obtiene un servicio del negocio indicado y devuelve sus datos mediante un
-    // DTO.
-    @GetMapping("/id/{serviceId}")
+    // Consulta un servicio usando la misma estructura de ruta que PUT y DELETE.
+    @GetMapping("/{serviceId}")
     public OfferedServiceResponse findByIdAndBusinessId(
             @PathVariable Long businessId,
             @PathVariable Long serviceId) {
