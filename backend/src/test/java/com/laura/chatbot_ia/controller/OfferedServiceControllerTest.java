@@ -27,6 +27,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.laura.chatbot_ia.entity.Business;
+import com.laura.chatbot_ia.service.BusinessService;
+
 // Probamos las respuestas HTTP del controlador aislándolo del gestor de servicios.
 @WebMvcTest(OfferedServiceController.class)
 class OfferedServiceControllerTest {
@@ -363,4 +366,77 @@ class OfferedServiceControllerTest {
 
         verify(offeredServiceManager).findByIdAndBusinessId(serviceId, businessId);
     }
+
+    // Cargamos únicamente la infraestructura web del controlador que queremos
+    // probar.
+    @WebMvcTest(BusinessController.class)
+    class BusinessControllerTest {
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        // Simulamos el servicio para no depender de PostgreSQL en estos tests.
+        @MockitoBean
+        private BusinessService businessService;
+
+        @Test
+        void createReturnsCreatedWhenBusinessIsValid() throws Exception {
+            // Preparamos el negocio que devolverá el servicio simulado.
+            Business savedBusiness = new Business();
+            savedBusiness.setName("Clínica Demo");
+            savedBusiness.setContactEmail("contacto@clinica-demo.es");
+            savedBusiness.setPhoneNumber("600123456");
+
+            when(businessService.save(any(Business.class))).thenReturn(savedBusiness);
+
+            // Enviamos una solicitud válida y comprobamos la respuesta HTTP.
+            mockMvc.perform(post("/api/businesses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {
+                                "name": "Clínica Demo",
+                                "contactEmail": "contacto@clinica-demo.es",
+                                "phoneNumber": "600123456"
+                            }
+                            """))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.name").value("Clínica Demo"))
+                    .andExpect(jsonPath("$.contactEmail").value("contacto@clinica-demo.es"));
+        }
+
+        @Test
+        void createReturnsBadRequestWhenNameIsBlank() throws Exception {
+            // Enviamos un nombre vacío para comprobar la validación @NotBlank.
+            mockMvc.perform(post("/api/businesses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {
+                                "name": " ",
+                                "contactEmail": "contacto@clinica-demo.es",
+                                "phoneNumber": "600123456"
+                            }
+                            """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").exists());
+        }
+
+        @Test
+        void createReturnsBadRequestWhenEmailIsInvalid() throws Exception {
+            // Enviamos un correo con formato incorrecto para comprobar @Email.
+            mockMvc.perform(post("/api/businesses")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {
+                                "name": "Clínica Demo",
+                                "contactEmail": "correo-no-valido",
+                                "phoneNumber": "600123456"
+                            }
+                            """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").exists());
+        }
+    }
+
 }
