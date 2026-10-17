@@ -76,7 +76,6 @@ public class OfferedServiceManager {
         existingService.setDescription(updatedService.getDescription());
         existingService.setPrice(updatedService.getPrice());
         existingService.setDurationMinutes(updatedService.getDurationMinutes());
-        existingService.setActive(updatedService.isActive());
 
         // Guardamos los cambios en la base de datos y devolvemos el servicio
         // actualizado.

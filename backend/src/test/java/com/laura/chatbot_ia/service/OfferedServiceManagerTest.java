@@ -121,7 +121,8 @@ class OfferedServiceManagerTest {
         verify(offeredServiceRepository).save(service);
     }
 
-    // Comprobamos que el gestor actualiza los datos y guarda el servicio existente.
+    // Comprobamos que el gestor actualiza los datos editables, conserva el estado
+    // activo del servicio existente y lo guarda.
     @Test
     void updateChangesServiceDataAndSavesIt() {
         Long businessId = 1L;
@@ -136,14 +137,16 @@ class OfferedServiceManagerTest {
         existingService.setDescription("Descripción antigua");
         existingService.setPrice(new BigDecimal("10.00"));
         existingService.setDurationMinutes(15);
-        existingService.setActive(true);
+        // El servicio ya está inactivo; update() no debe reactivarlo.
+        existingService.setActive(false);
 
         OfferedService updatedData = new OfferedService();
         updatedData.setName("Servicio actualizado");
         updatedData.setDescription("Descripción nueva");
         updatedData.setPrice(new BigDecimal("20.50"));
         updatedData.setDurationMinutes(40);
-        updatedData.setActive(false);
+        // El PUT intenta activarlo, pero ese campo no es editable en update().
+        updatedData.setActive(true);
         updatedData.setBusiness(new Business());
 
         when(businessRepository.existsById(businessId)).thenReturn(true);
@@ -157,6 +160,7 @@ class OfferedServiceManagerTest {
         assertEquals("Descripción nueva", result.getDescription());
         assertEquals(new BigDecimal("20.50"), result.getPrice());
         assertEquals(40, result.getDurationMinutes());
+        // Aunque updatedData pide active = true, el servicio sigue inactivo.
         assertEquals(false, result.isActive());
         assertSame(business, result.getBusiness());
         verify(offeredServiceRepository).save(existingService);
