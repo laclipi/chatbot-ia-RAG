@@ -1,0 +1,36 @@
+$kind: http-request
+description: |-
+  Crea un negocio valido y lo guarda.
+  Espera HTTP 201 y el negocio creado. El nombre admite hasta 150 caracteres.
+  contactEmail y phoneNumber son opcionales. Si no se envia active, queda en true.
+  Esta peticion escribe en la base de datos.
+url: '{{baseUrl}}/api/businesses'
+method: POST
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Clínica Demo",
+      "contactEmail": "contacto@clinica-demo.es",
+      "phoneNumber": "600123456"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 201 Created", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Devuelve el negocio creado", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.be.a("number");
+          pm.expect(body.name).to.eql("Clínica Demo");
+          pm.expect(body.contactEmail).to.eql("contacto@clinica-demo.es");
+          pm.expect(body.phoneNumber).to.eql("600123456");
+          pm.expect(body.active).to.eql(true);
+      });

@@ -1,0 +1,42 @@
+$kind: http-request
+description: |-
+  Crea un servicio para el negocio indicado.
+  El cuerpo admite name, description, price y durationMinutes. No admite active.
+  Espera HTTP 201 y un servicio activo. Esta peticion escribe en la base de datos.
+  El negocio de la ruta debe existir; si no, la API responde HTTP 404.
+url: '{{baseUrl}}/api/businesses/:businessId/services'
+method: POST
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio al que se asocia el servicio. Debe existir.
+body:
+  type: json
+  content: |-
+    {
+      "name": "Consulta inicial",
+      "description": "Primera consulta",
+      "price": 35.00,
+      "durationMinutes": 30
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 201 Created", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Devuelve el servicio creado", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.be.a("number");
+          pm.expect(body.name).to.eql("Consulta inicial");
+          pm.expect(body.description).to.eql("Primera consulta");
+          pm.expect(body.price).to.eql(35);
+          pm.expect(body.durationMinutes).to.eql(30);
+          pm.expect(body.active).to.eql(true);
+      });

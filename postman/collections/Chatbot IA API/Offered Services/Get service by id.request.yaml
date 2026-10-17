@@ -1,0 +1,33 @@
+$kind: http-request
+description: |-
+  Consulta un servicio comprobando que pertenece al negocio.
+  Espera HTTP 200 y OfferedServiceResponse.
+  Esta consulta no filtra por active, así que tambien puede devolver un servicio inactivo.
+  Si el servicio no pertenece al negocio, responde HTTP 404 con ApiError.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId'
+method: GET
+order: 3000
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio propietario.
+  - key: serviceId
+    value: '10'
+    description: Identificador del servicio. Debe pertenecer a ese negocio.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Devuelve el servicio solicitado", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.eql(10);
+          pm.expect(body.name).to.be.a("string").and.not.empty;
+          pm.expect(body).to.have.property("description");
+          pm.expect(body.price).to.be.a("number");
+          pm.expect(body.durationMinutes).to.be.a("number");
+          pm.expect(body.active).to.be.a("boolean");
+      });

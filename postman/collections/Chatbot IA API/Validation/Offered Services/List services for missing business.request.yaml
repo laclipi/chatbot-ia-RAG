@@ -1,0 +1,25 @@
+$kind: http-request
+description: |-
+  Lista servicios de un negocio que no existe.
+  Espera HTTP 404 y ApiError con el mensaje "No existe un negocio con ID 99".
+  El negocio 99 no debe existir.
+url: '{{baseUrl}}/api/businesses/:businessId/services'
+method: GET
+order: 1000
+pathVariables:
+  - key: businessId
+    value: '99'
+    description: Identificador de un negocio que no debe existir.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 404 y negocio inexistente", function () {
+          pm.response.to.have.status(404);
+          const body = pm.response.json();
+          pm.expect(body.status).to.eql(404);
+          pm.expect(body.error).to.eql("Not Found");
+          pm.expect(body.message).to.eql("No existe un negocio con ID 99");
+          pm.expect(body.path).to.eql("/api/businesses/99/services");
+          pm.expect(body).to.have.property("timestamp");
+      });

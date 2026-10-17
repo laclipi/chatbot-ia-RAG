@@ -1,0 +1,8 @@
+$kind: collection
+name: Offered Services
+description: |-
+  Operaciones de éxito sobre /api/businesses/{businessId}/services.
+  El cuerpo de alta y actualizacion usa OfferedServiceRequest.
+  La respuesta usa OfferedServiceResponse: id, name, description, price, durationMinutes y active.
+  El listado general y el de /active delegan en el mismo metodo y devuelven solo servicios activos.
+order: 3000

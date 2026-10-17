@@ -1,0 +1,31 @@
+$kind: http-request
+description: |-
+  Crea un negocio enviando solo el nombre, que es el unico campo obligatorio.
+  Espera HTTP 201. El correo y el telefono pueden omitirse.
+  Esta peticion escribe en la base de datos.
+url: '{{baseUrl}}/api/businesses'
+method: POST
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Clínica Demo"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 201 Created", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Acepta un negocio solo con nombre", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.be.a("number");
+          pm.expect(body.name).to.eql("Clínica Demo");
+          pm.expect(body.active).to.eql(true);
+      });

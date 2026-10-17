@@ -1,0 +1,37 @@
+$kind: http-request
+description: |-
+  Rechaza un nombre en blanco al crear un servicio.
+  Espera HTTP 400 y el mensaje "El nombre del servicio es obligatorio".
+  No llega a comprobar si el negocio existe.
+url: '{{baseUrl}}/api/businesses/:businessId/services'
+method: POST
+order: 5000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador de ruta. La validación del cuerpo ocurre antes de usarlo.
+body:
+  type: json
+  content: |-
+    {
+      "name": " ",
+      "description": "Primera consulta",
+      "price": 35.00,
+      "durationMinutes": 30
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 y nombre obligatorio", function () {
+          pm.response.to.have.status(400);
+          const body = pm.response.json();
+          pm.expect(body.status).to.eql(400);
+          pm.expect(body.error).to.eql("Bad Request");
+          pm.expect(body.message).to.eql("El nombre del servicio es obligatorio");
+          pm.expect(body.path).to.eql("/api/businesses/1/services");
+          pm.expect(body).to.have.property("timestamp");
+      });

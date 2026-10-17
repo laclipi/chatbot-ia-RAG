@@ -1,0 +1,27 @@
+$kind: http-request
+description: |-
+  Lista los negocios registrados.
+  Espera HTTP 200 y un array JSON, vacio si aun no hay datos.
+  Cada elemento expone id, name, contactEmail, phoneNumber y active.
+url: '{{baseUrl}}/api/businesses'
+method: GET
+order: 1000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("La respuesta es un array de negocios", function () {
+          const body = pm.response.json();
+          pm.expect(body).to.be.an("array");
+          body.forEach(function (business) {
+              pm.expect(business.id).to.be.a("number");
+              pm.expect(business.name).to.be.a("string");
+              pm.expect(business).to.have.property("contactEmail");
+              pm.expect(business).to.have.property("phoneNumber");
+              pm.expect(business.active).to.be.a("boolean");
+          });
+      });

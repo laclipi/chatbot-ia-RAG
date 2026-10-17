@@ -1,0 +1,32 @@
+$kind: http-request
+description: |-
+  Lista los servicios de un negocio.
+  Espera HTTP 200 y un array JSON. El gestor solo incluye servicios activos.
+  Si el negocio no existe, la API responde HTTP 404 con ApiError y esta prueba fallara.
+url: '{{baseUrl}}/api/businesses/:businessId/services'
+method: GET
+order: 1000
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio. Debe existir para obtener HTTP 200.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("La respuesta es un array de servicios activos", function () {
+          const body = pm.response.json();
+          pm.expect(body).to.be.an("array");
+          body.forEach(function (service) {
+              pm.expect(service.id).to.be.a("number");
+              pm.expect(service.name).to.be.a("string");
+              pm.expect(service).to.have.property("description");
+              pm.expect(service.price).to.be.a("number");
+              pm.expect(service.durationMinutes).to.be.a("number");
+              pm.expect(service.active).to.eql(true);
+          });
+      });

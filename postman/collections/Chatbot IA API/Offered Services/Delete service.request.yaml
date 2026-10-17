@@ -1,0 +1,23 @@
+$kind: http-request
+description: |-
+  Elimina un servicio del negocio indicado.
+  Espera HTTP 204 sin cuerpo. Esta peticion borra el registro si existe.
+  Si no pertenece al negocio, responde HTTP 404 con ApiError.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId'
+method: DELETE
+order: 7000
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio propietario.
+  - key: serviceId
+    value: '10'
+    description: Identificador del servicio que se elimina.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 204 sin cuerpo", function () {
+          pm.response.to.have.status(204);
+          pm.expect(pm.response.text()).to.eql("");
+      });

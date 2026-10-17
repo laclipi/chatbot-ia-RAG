@@ -1,0 +1,39 @@
+$kind: http-request
+description: |-
+  Crea un servicio en el limite inferior aceptado: precio 0 y duracion 1.
+  La descripción es opcional y aqui se omite.
+  Espera HTTP 201. Esta peticion escribe en la base de datos.
+url: '{{baseUrl}}/api/businesses/:businessId/services'
+method: POST
+order: 5000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio. Debe existir.
+body:
+  type: json
+  content: |-
+    {
+      "name": "Consulta breve",
+      "price": 0.00,
+      "durationMinutes": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 201 Created", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Acepta precio cero y duracion minima", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.be.a("number");
+          pm.expect(body.name).to.eql("Consulta breve");
+          pm.expect(body.price).to.eql(0);
+          pm.expect(body.durationMinutes).to.eql(1);
+          pm.expect(body.active).to.eql(true);
+      });

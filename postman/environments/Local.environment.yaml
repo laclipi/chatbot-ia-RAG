@@ -1,0 +1,7 @@
+name: Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+    enabled: true
+    type: default
+    description: URL base de la API Spring Boot en local.

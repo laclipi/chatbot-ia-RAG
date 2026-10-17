@@ -1,0 +1,39 @@
+$kind: http-request
+description: |-
+  Actualiza un servicio que no existe con un cuerpo valido.
+  Espera HTTP 404 y el mensaje "No existe un servicio con ID 99 para el negocio con ID 1".
+  El negocio 1 debe existir y el servicio 99 no debe pertenecerle.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId'
+method: PUT
+order: 13000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Negocio que debe existir para llegar a la comprobacion del servicio.
+  - key: serviceId
+    value: '99'
+    description: Servicio que no debe existir en ese negocio.
+body:
+  type: json
+  content: |-
+    {
+      "name": "Consulta avanzada",
+      "price": 50.00,
+      "durationMinutes": 45
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 404 y servicio inexistente", function () {
+          pm.response.to.have.status(404);
+          const body = pm.response.json();
+          pm.expect(body.status).to.eql(404);
+          pm.expect(body.error).to.eql("Not Found");
+          pm.expect(body.message).to.eql("No existe un servicio con ID 99 para el negocio con ID 1");
+          pm.expect(body.path).to.eql("/api/businesses/1/services/99");
+          pm.expect(body).to.have.property("timestamp");
+      });

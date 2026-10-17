@@ -1,0 +1,32 @@
+$kind: http-request
+description: |-
+  Rechaza un contactEmail que no cumple @Email.
+  Espera HTTP 400 y el mensaje "El correo electrónico no tiene un formato válido".
+  No guarda el negocio.
+url: '{{baseUrl}}/api/businesses'
+method: POST
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Clínica Demo",
+      "contactEmail": "correo-no-valido",
+      "phoneNumber": "600123456"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 y correo inválido", function () {
+          pm.response.to.have.status(400);
+          const body = pm.response.json();
+          pm.expect(body.status).to.eql(400);
+          pm.expect(body.error).to.eql("Bad Request");
+          pm.expect(body.message).to.eql("El correo electrónico no tiene un formato válido");
+          pm.expect(body.path).to.eql("/api/businesses");
+          pm.expect(body).to.have.property("timestamp");
+      });

@@ -1,0 +1,9 @@
+$kind: collection
+name: Chatbot IA API
+description: |-
+  Pruebas de la API de Chatbot IA, derivadas de los controladores REST.
+  Cubre Health, negocios y servicios ofrecidos. El backend no define registro, login ni JWT.
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+    description: URL base local. Spring Boot usa el puerto 8080 porque application.properties no define server.port.

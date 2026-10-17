@@ -1,0 +1,44 @@
+$kind: http-request
+description: |-
+  Actualiza name, description, price y durationMinutes de un servicio.
+  No modifica el id, el negocio ni el estado active.
+  Espera HTTP 200 y el servicio actualizado. El servicio debe pertenecer al negocio.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId'
+method: PUT
+order: 6000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio propietario.
+  - key: serviceId
+    value: '10'
+    description: Identificador del servicio que se actualiza.
+body:
+  type: json
+  content: |-
+    {
+      "name": "Consulta avanzada",
+      "description": "Consulta de seguimiento",
+      "price": 50.00,
+      "durationMinutes": 45
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Devuelve el servicio actualizado", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.eql(10);
+          pm.expect(body.name).to.eql("Consulta avanzada");
+          pm.expect(body.description).to.eql("Consulta de seguimiento");
+          pm.expect(body.price).to.eql(50);
+          pm.expect(body.durationMinutes).to.eql(45);
+          pm.expect(body.active).to.be.a("boolean");
+      });

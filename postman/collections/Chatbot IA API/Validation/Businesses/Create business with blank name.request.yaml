@@ -1,0 +1,31 @@
+$kind: http-request
+description: |-
+  Rechaza un nombre en blanco. @NotBlank no tiene mensaje propio, así que ApiError.message es "must not be blank".
+  Espera HTTP 400 y no guarda el negocio.
+url: '{{baseUrl}}/api/businesses'
+method: POST
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": " ",
+      "contactEmail": "contacto@clinica-demo.es",
+      "phoneNumber": "600123456"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 y nombre en blanco", function () {
+          pm.response.to.have.status(400);
+          const body = pm.response.json();
+          pm.expect(body.status).to.eql(400);
+          pm.expect(body.error).to.eql("Bad Request");
+          pm.expect(body.message).to.eql("must not be blank");
+          pm.expect(body.path).to.eql("/api/businesses");
+          pm.expect(body).to.have.property("timestamp");
+      });

@@ -1,0 +1,4 @@
+$kind: collection
+name: Businesses
+description: Rechazos al crear o consultar un negocio.
+order: 1000

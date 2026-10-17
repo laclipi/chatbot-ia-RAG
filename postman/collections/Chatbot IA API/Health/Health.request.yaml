@@ -1,0 +1,18 @@
+$kind: http-request
+description: |-
+  Comprueba que la API responde.
+  GET /api/health devuelve HTTP 200 y el texto "Chatbot IA API is running".
+url: '{{baseUrl}}/api/health'
+method: GET
+order: 1000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("El cuerpo confirma que la API está en marcha", function () {
+          pm.expect(pm.response.text()).to.eql("Chatbot IA API is running");
+      });

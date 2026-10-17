@@ -1,0 +1,37 @@
+$kind: http-request
+description: |-
+  Cambia solo el estado active mediante el query param active.
+  Esta peticion envia active=false y espera HTTP 200 con active en false.
+  Para reactivar el mismo servicio, cambia el parámetro a true.
+  El servicio debe pertenecer al negocio.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId/active?active=false'
+method: PATCH
+order: 8000
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio propietario.
+  - key: serviceId
+    value: '10'
+    description: Identificador del servicio cuyo estado se cambia.
+queryParams:
+  - key: active
+    value: 'false'
+    description: Nuevo estado. false desactiva el servicio y true lo reactiva.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("El servicio queda inactivo", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.eql(10);
+          pm.expect(body.name).to.be.a("string");
+          pm.expect(body).to.have.property("description");
+          pm.expect(body.price).to.be.a("number");
+          pm.expect(body.durationMinutes).to.be.a("number");
+          pm.expect(body.active).to.eql(false);
+      });

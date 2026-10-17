@@ -1,0 +1,23 @@
+$kind: http-request
+description: |-
+  Llama a PATCH /active sin el query param active.
+  Spring responde HTTP 400 porque el parámetro es obligatorio.
+  Ese error no pasa por ApiError, así que la prueba solo comprueba el código.
+  No modifica el servicio.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId/active'
+method: PATCH
+order: 17000
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador numérico de ruta. El rechazo ocurre por el parámetro ausente.
+  - key: serviceId
+    value: '10'
+    description: Identificador numérico de ruta. El rechazo ocurre por el parámetro ausente.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 por parámetro active ausente", function () {
+          pm.response.to.have.status(400);
+      });

@@ -1,0 +1,28 @@
+$kind: http-request
+description: |-
+  Consulta un negocio por su id.
+  Espera HTTP 200 y el objeto Business si existe el id indicado.
+  Si no existe, el controlador responde HTTP 404 sin cuerpo y esta prueba fallara.
+url: '{{baseUrl}}/api/businesses/:id'
+method: GET
+order: 2000
+pathVariables:
+  - key: id
+    value: '1'
+    description: Identificador del negocio. Debe existir para obtener HTTP 200.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Devuelve el negocio solicitado", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.eql(1);
+          pm.expect(body.name).to.be.a("string").and.not.empty;
+          pm.expect(body).to.have.property("contactEmail");
+          pm.expect(body).to.have.property("phoneNumber");
+          pm.expect(body.active).to.be.a("boolean");
+      });

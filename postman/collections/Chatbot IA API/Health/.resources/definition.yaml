@@ -1,0 +1,4 @@
+$kind: collection
+name: Health
+description: Comprueba que la API responde.
+order: 1000

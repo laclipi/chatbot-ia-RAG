@@ -1,0 +1,15 @@
+$kind: http-request
+description: |-
+  Envía un id que no es un número.
+  Spring rechaza la conversion a Long con HTTP 400 antes de entrar en el controlador.
+  El cuerpo es el error por defecto de Spring, no ApiError. La prueba solo comprueba el código.
+url: '{{baseUrl}}/api/businesses/abc'
+method: GET
+order: 5000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 por id no numerico", function () {
+          pm.response.to.have.status(400);
+      });

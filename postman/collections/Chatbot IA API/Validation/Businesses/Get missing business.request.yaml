@@ -1,0 +1,20 @@
+$kind: http-request
+description: |-
+  Consulta un negocio que no existe.
+  El controlador responde HTTP 404 sin cuerpo. No usa ApiError.
+  El id 99 no debe existir; si existe, esta prueba fallara.
+url: '{{baseUrl}}/api/businesses/:id'
+method: GET
+order: 4000
+pathVariables:
+  - key: id
+    value: '99'
+    description: Identificador que no debe corresponder a un negocio guardado.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 404 sin cuerpo", function () {
+          pm.response.to.have.status(404);
+          pm.expect(pm.response.text()).to.eql("");
+      });

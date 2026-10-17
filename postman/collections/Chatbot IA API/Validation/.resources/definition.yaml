@@ -1,0 +1,9 @@
+$kind: collection
+name: Validation
+description: |-
+  Casos rechazados por la API. No crean ni modifican datos cuando la validación o el 404 responden antes de guardar.
+  Los HTTP 400 de cuerpo usan ApiError: timestamp, status, error, message y path.
+  El mensaje es solo el primer error de validación.
+  Los HTTP 404 de un negocio inexistente en GET /api/businesses/{id} no llevan cuerpo.
+  Los HTTP 404 de servicios si llevan ApiError.
+order: 4000

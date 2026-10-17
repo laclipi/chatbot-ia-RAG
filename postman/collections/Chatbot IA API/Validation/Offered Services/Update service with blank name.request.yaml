@@ -1,0 +1,40 @@
+$kind: http-request
+description: |-
+  Rechaza una actualizacion con el nombre en blanco.
+  Espera HTTP 400 y el mensaje "El nombre del servicio es obligatorio".
+  La validación ocurre antes de buscar el servicio, así que no lo modifica.
+url: '{{baseUrl}}/api/businesses/:businessId/services/:serviceId'
+method: PUT
+order: 14000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador de ruta. La validación del cuerpo ocurre antes de usarlo.
+  - key: serviceId
+    value: '10'
+    description: Identificador de ruta. La validación del cuerpo ocurre antes de usarlo.
+body:
+  type: json
+  content: |-
+    {
+      "name": " ",
+      "description": "Primera consulta",
+      "price": 35.00,
+      "durationMinutes": 30
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 y nombre obligatorio", function () {
+          pm.response.to.have.status(400);
+          const body = pm.response.json();
+          pm.expect(body.status).to.eql(400);
+          pm.expect(body.error).to.eql("Bad Request");
+          pm.expect(body.message).to.eql("El nombre del servicio es obligatorio");
+          pm.expect(body.path).to.eql("/api/businesses/1/services/10");
+          pm.expect(body).to.have.property("timestamp");
+      });

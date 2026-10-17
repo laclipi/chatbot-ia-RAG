@@ -1,0 +1,33 @@
+$kind: http-request
+description: |-
+  Lista los servicios activos de un negocio en GET /services/active.
+  Espera HTTP 200 y un array JSON.
+  El controlador usa el mismo metodo que el listado general, que ya filtra por active=true.
+  Si el negocio no existe, responde HTTP 404 con ApiError.
+url: '{{baseUrl}}/api/businesses/:businessId/services/active'
+method: GET
+order: 2000
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador del negocio. Debe existir para obtener HTTP 200.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("La respuesta es un array de servicios activos", function () {
+          const body = pm.response.json();
+          pm.expect(body).to.be.an("array");
+          body.forEach(function (service) {
+              pm.expect(service.id).to.be.a("number");
+              pm.expect(service.name).to.be.a("string");
+              pm.expect(service).to.have.property("description");
+              pm.expect(service.price).to.be.a("number");
+              pm.expect(service.durationMinutes).to.be.a("number");
+              pm.expect(service.active).to.eql(true);
+          });
+      });

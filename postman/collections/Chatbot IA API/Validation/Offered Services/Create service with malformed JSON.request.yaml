@@ -1,0 +1,28 @@
+$kind: http-request
+description: |-
+  Envia un JSON incompleto con Content-Type application/json.
+  Spring no puede leer el cuerpo y responde HTTP 400 antes de validar el DTO.
+  Ese error no pasa por ApiError, así que la prueba solo comprueba el código.
+url: '{{baseUrl}}/api/businesses/:businessId/services'
+method: POST
+order: 12000
+headers:
+  - key: Content-Type
+    value: application/json
+pathVariables:
+  - key: businessId
+    value: '1'
+    description: Identificador de ruta. El cuerpo se rechaza antes de usarlo.
+body:
+  type: text
+  content: '{'
+settings:
+  disabledSystemHeaders:
+    - content-type
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 400 por JSON mal formado", function () {
+          pm.response.to.have.status(400);
+      });

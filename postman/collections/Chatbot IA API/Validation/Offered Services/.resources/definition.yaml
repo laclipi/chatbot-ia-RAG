@@ -1,0 +1,6 @@
+$kind: collection
+name: Offered Services
+description: |-
+  Rechazos al crear, consultar, actualizar, eliminar o cambiar el estado de un servicio.
+  Los 404 de esta carpeta usan el id 99 y esperan que ese negocio o servicio no exista.
+order: 2000
