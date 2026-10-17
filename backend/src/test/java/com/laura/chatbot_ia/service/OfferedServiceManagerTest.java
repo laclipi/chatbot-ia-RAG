@@ -1,6 +1,8 @@
 package com.laura.chatbot_ia.service;
 
+import com.laura.chatbot_ia.entity.Business;
 import com.laura.chatbot_ia.entity.OfferedService;
+import com.laura.chatbot_ia.exception.BusinessNotFoundException;
 import com.laura.chatbot_ia.exception.OfferedServiceNotFoundException;
 
 import com.laura.chatbot_ia.repository.BusinessRepository;
@@ -13,10 +15,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -75,16 +82,22 @@ class OfferedServiceManagerTest {
         Long serviceId = 2L;
 
         OfferedService service = new OfferedService();
+        service.setName("Consulta inicial");
+        service.setPrice(new BigDecimal("35.00"));
+        service.setDurationMinutes(30);
         service.setActive(true);
 
         when(businessRepository.existsById(businessId)).thenReturn(true);
         when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
-                .thenReturn(java.util.Optional.of(service));
+                .thenReturn(Optional.of(service));
         when(offeredServiceRepository.save(service)).thenReturn(service);
 
         OfferedService result = offeredServiceManager.changeActiveStatus(businessId, serviceId, false);
 
         assertEquals(false, result.isActive());
+        assertEquals("Consulta inicial", result.getName());
+        assertEquals(new BigDecimal("35.00"), result.getPrice());
+        assertEquals(30, result.getDurationMinutes());
         verify(offeredServiceRepository).save(service);
     }
 
@@ -114,20 +127,38 @@ class OfferedServiceManagerTest {
         Long businessId = 1L;
         Long serviceId = 2L;
 
+        Business business = new Business();
+        business.setName("Clínica Demo");
+
         OfferedService existingService = new OfferedService();
+        existingService.setBusiness(business);
         existingService.setName("Servicio antiguo");
+        existingService.setDescription("Descripción antigua");
+        existingService.setPrice(new BigDecimal("10.00"));
+        existingService.setDurationMinutes(15);
+        existingService.setActive(true);
 
         OfferedService updatedData = new OfferedService();
         updatedData.setName("Servicio actualizado");
+        updatedData.setDescription("Descripción nueva");
+        updatedData.setPrice(new BigDecimal("20.50"));
+        updatedData.setDurationMinutes(40);
+        updatedData.setActive(false);
+        updatedData.setBusiness(new Business());
 
         when(businessRepository.existsById(businessId)).thenReturn(true);
         when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
-                .thenReturn(java.util.Optional.of(existingService));
+                .thenReturn(Optional.of(existingService));
         when(offeredServiceRepository.save(existingService)).thenReturn(existingService);
 
         OfferedService result = offeredServiceManager.update(businessId, serviceId, updatedData);
 
         assertEquals("Servicio actualizado", result.getName());
+        assertEquals("Descripción nueva", result.getDescription());
+        assertEquals(new BigDecimal("20.50"), result.getPrice());
+        assertEquals(40, result.getDurationMinutes());
+        assertEquals(false, result.isActive());
+        assertSame(business, result.getBusiness());
         verify(offeredServiceRepository).save(existingService);
     }
 
@@ -180,17 +211,21 @@ class OfferedServiceManagerTest {
     void createSavesAndReturnsOfferedService() {
         Long businessId = 1L;
 
+        Business business = new Business();
+        business.setName("Clínica Demo");
+
         OfferedService service = new OfferedService();
         service.setName("Consulta inicial");
 
         // Simulamos que el negocio existe y que el repositorio lo devuelve.
         when(businessRepository.findById(businessId))
-                .thenReturn(java.util.Optional.of(new com.laura.chatbot_ia.entity.Business()));
+                .thenReturn(Optional.of(business));
         when(offeredServiceRepository.save(service)).thenReturn(service);
 
         OfferedService result = offeredServiceManager.create(businessId, service);
 
         assertSame(service, result);
+        assertSame(business, result.getBusiness());
         verify(offeredServiceRepository).save(service);
     }
 
@@ -278,9 +313,76 @@ class OfferedServiceManagerTest {
                 OfferedServiceNotFoundException.class,
                 () -> offeredServiceManager.delete(businessId, serviceId));
 
-        org.mockito.Mockito.verify(
-                offeredServiceRepository,
-                org.mockito.Mockito.never()).delete(org.mockito.ArgumentMatchers.any(OfferedService.class));
+        verify(offeredServiceRepository, never()).delete(any(OfferedService.class));
+    }
+
+    // Comprobamos que la búsqueda devuelve el servicio que pertenece al negocio.
+    @Test
+    void findByIdAndBusinessIdReturnsServiceWhenItBelongsToBusiness() {
+        Long businessId = 1L;
+        Long serviceId = 2L;
+
+        OfferedService service = new OfferedService();
+        service.setName("Consulta inicial");
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(Optional.of(service));
+
+        OfferedService result = offeredServiceManager.findByIdAndBusinessId(serviceId, businessId);
+
+        assertSame(service, result);
+        verify(offeredServiceRepository).findByIdAndBusinessId(serviceId, businessId);
+    }
+
+    // Comprobamos que no se actualiza nada si el negocio no existe.
+    @Test
+    void updateThrowsExceptionWhenBusinessDoesNotExist() {
+        Long businessId = 99L;
+        Long serviceId = 2L;
+
+        OfferedService updatedData = new OfferedService();
+        updatedData.setName("Servicio actualizado");
+
+        when(businessRepository.existsById(businessId)).thenReturn(false);
+
+        assertThrows(
+                BusinessNotFoundException.class,
+                () -> offeredServiceManager.update(businessId, serviceId, updatedData));
+
+        verify(offeredServiceRepository, never()).save(any(OfferedService.class));
+    }
+
+    // Comprobamos que no se elimina nada si el negocio no existe.
+    @Test
+    void deleteThrowsExceptionWhenBusinessDoesNotExist() {
+        Long businessId = 99L;
+        Long serviceId = 2L;
+
+        when(businessRepository.existsById(businessId)).thenReturn(false);
+
+        assertThrows(
+                BusinessNotFoundException.class,
+                () -> offeredServiceManager.delete(businessId, serviceId));
+
+        verify(offeredServiceRepository, never()).delete(any(OfferedService.class));
+    }
+
+    // Comprobamos que no se cambia el estado si el servicio no pertenece al negocio.
+    @Test
+    void changeActiveStatusThrowsExceptionWhenServiceDoesNotExist() {
+        Long businessId = 1L;
+        Long serviceId = 99L;
+
+        when(businessRepository.existsById(businessId)).thenReturn(true);
+        when(offeredServiceRepository.findByIdAndBusinessId(serviceId, businessId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                OfferedServiceNotFoundException.class,
+                () -> offeredServiceManager.changeActiveStatus(businessId, serviceId, false));
+
+        verify(offeredServiceRepository, never()).save(any(OfferedService.class));
     }
 
 }
