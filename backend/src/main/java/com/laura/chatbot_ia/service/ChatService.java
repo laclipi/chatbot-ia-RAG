@@ -17,16 +17,49 @@ public class ChatService {
         this.offeredServiceManager = offeredServiceManager;
     }
 
-    // Genera una respuesta inicial basada únicamente en los servicios del negocio.
+    // Interpreta preguntas sencillas sobre precios y duración usando el catálogo
+    // real.
     public String answer(Long businessId, String message) {
         List<OfferedService> services = offeredServiceManager.findByBusinessId(businessId);
 
-        // Si el catálogo está vacío, evitamos inventar información.
+        // Evitamos inventar respuestas cuando el negocio no tiene servicios.
         if (services.isEmpty()) {
             return "Este negocio todavía no tiene servicios activos en su catálogo.";
         }
 
-        // Indicamos qué servicios conoce el chatbot y sus datos registrados.
+        // Normalizamos la pregunta para detectar las intenciones básicas.
+        String question = message.toLowerCase().trim();
+
+        boolean asksPrice = question.contains("precio")
+                || question.contains("cuesta")
+                || question.contains("coste");
+
+        boolean asksDuration = question.contains("duración")
+                || question.contains("duracion")
+                || question.contains("cuánto dura")
+                || question.contains("cuanto dura");
+
+        // Buscamos si la pregunta menciona el nombre de algún servicio registrado.
+        OfferedService matchingService = services.stream()
+                .filter(service -> question.contains(
+                        service.getName().toLowerCase()))
+                .findFirst()
+                .orElse(null);
+
+        // Respondemos únicamente con el precio del servicio mencionado.
+        if (asksPrice && matchingService != null) {
+            return "El precio de " + matchingService.getName()
+                    + " es " + matchingService.getPrice() + " €.";
+        }
+
+        // Respondemos únicamente con la duración del servicio mencionado.
+        if (asksDuration && matchingService != null) {
+            return "La duración de " + matchingService.getName()
+                    + " es " + matchingService.getDurationMinutes()
+                    + " minutos.";
+        }
+
+        // Si no identifica una pregunta específica, mostramos el catálogo disponible.
         StringBuilder answer = new StringBuilder(
                 "Estos son los servicios disponibles de este negocio:\n");
 
@@ -47,4 +80,5 @@ public class ChatService {
 
         return answer.toString();
     }
+
 }

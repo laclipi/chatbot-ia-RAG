@@ -56,4 +56,45 @@ class ChatServiceTest {
                 "Este negocio todavía no tiene servicios activos en su catálogo.",
                 answer);
     }
+
+    // Comprobamos que una pregunta sobre el precio devuelve solo ese dato.
+    @Test
+    void answerReturnsPriceWhenAskedAboutSpecificService() {
+        // Simulamos un servicio del catálogo con precio y duración conocidos.
+        OfferedServiceManager manager = mock(OfferedServiceManager.class);
+        OfferedService service = mock(OfferedService.class);
+
+        when(manager.findByBusinessId(1L)).thenReturn(List.of(service));
+        when(service.getName()).thenReturn("Consulta general");
+        when(service.getPrice()).thenReturn(new BigDecimal("50.00"));
+
+        ChatService chatService = new ChatService(manager);
+
+        // Preguntamos el precio de un servicio concreto.
+        String answer = chatService.answer(
+                1L, "¿Cuánto cuesta la consulta general?");
+
+        assertEquals("El precio de Consulta general es 50.00 €.", answer);
+    }
+
+    // Comprobamos que una pregunta sobre la duración devuelve solo ese dato.
+    @Test
+    void answerReturnsDurationWhenAskedAboutSpecificService() {
+        // Simulamos un servicio del catálogo con una duración conocida.
+        OfferedServiceManager manager = mock(OfferedServiceManager.class);
+        OfferedService service = mock(OfferedService.class);
+
+        when(manager.findByBusinessId(1L)).thenReturn(List.of(service));
+        when(service.getName()).thenReturn("Consulta general");
+        when(service.getDurationMinutes()).thenReturn(30);
+
+        ChatService chatService = new ChatService(manager);
+
+        // Preguntamos cuánto dura un servicio concreto.
+        String answer = chatService.answer(
+                1L, "¿Cuánto dura la consulta general?");
+
+        assertEquals("La duración de Consulta general es 30 minutos.", answer);
+    }
+
 }
