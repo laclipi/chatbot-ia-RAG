@@ -22,7 +22,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -91,6 +91,19 @@ class AppointmentServiceTest {
         assertEquals(AppointmentStatus.PENDING, result.getStatus());
 
         verify(appointmentRepository).save(any(Appointment.class));
+
+        // Verificamos que el servicio excluye las reservas canceladas al comprobar
+        // solapamientos.
+        verify(appointmentRepository).save(any(Appointment.class));
+
+        // Verificamos que el servicio excluye las reservas canceladas al comprobar
+        // solapamientos.
+        verify(appointmentRepository)
+                .existsByBusinessIdAndStatusNotAndStartAtLessThanAndEndAtGreaterThan(
+                        businessId,
+                        AppointmentStatus.CANCELLED,
+                        startAt.plusMinutes(30),
+                        startAt);
     }
 
     // Comprueba que un horario ocupado provoca un conflicto y no guarda otra
@@ -134,24 +147,29 @@ class AppointmentServiceTest {
     }
 
     // Comprueba que cancelar una reserva cambia su estado y guarda el cambio.
+
+    // Comprueba que cancelar una reserva confirmada cambia su estado y guarda el
+    // cambio.
     @Test
-    void cancelChangesStatusAndSavesAppointment() {
+    void cancelChangesConfirmedAppointmentToCancelledAndSavesIt() {
         Long businessId = 1L;
         Long appointmentId = 10L;
 
+        // Simulamos una reserva que ya estaba confirmada.
         Appointment appointment = new Appointment();
-        appointment.setStatus(AppointmentStatus.PENDING);
+        appointment.setStatus(AppointmentStatus.CONFIRMED);
 
         when(appointmentRepository.findByIdAndBusinessId(appointmentId, businessId))
                 .thenReturn(Optional.of(appointment));
 
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
+        // Ejecutamos la cancelación.
         Appointment result = appointmentService.cancel(businessId, appointmentId);
 
+        // Verificamos que la reserva queda cancelada y se persiste el cambio.
         assertSame(appointment, result);
         assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
-
         verify(appointmentRepository).save(appointment);
     }
 
@@ -196,6 +214,29 @@ class AppointmentServiceTest {
                 () -> appointmentService.confirm(businessId, appointmentId));
 
         // Verificamos que el estado no se persiste cuando la confirmación no es válida.
+        org.mockito.Mockito.verify(
+                appointmentRepository,
+                org.mockito.Mockito.never())
+                .save(any(Appointment.class));
+    }
+
+    // Comprueba que confirmar una reserva inexistente genera un conflicto y no
+    // guarda nada.
+    @Test
+    void confirmThrowsConflictWhenAppointmentDoesNotExistForBusiness() {
+        Long businessId = 1L;
+        Long appointmentId = 99L;
+
+        // Simulamos que el repositorio no encuentra la reserva en ese negocio.
+        when(appointmentRepository.findByIdAndBusinessId(appointmentId, businessId))
+                .thenReturn(Optional.empty());
+
+        // La operación debe fallar porque la reserva no existe para ese negocio.
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.laura.chatbot_ia.exception.AppointmentConflictException.class,
+                () -> appointmentService.confirm(businessId, appointmentId));
+
+        // Verificamos que no se intenta guardar ninguna modificación.
         org.mockito.Mockito.verify(
                 appointmentRepository,
                 org.mockito.Mockito.never())
