@@ -1,0 +1,4 @@
+$kind: http-request
+url: http://localhost:8080/api/businesses/1/appointments
+method: GET
+order: 2000

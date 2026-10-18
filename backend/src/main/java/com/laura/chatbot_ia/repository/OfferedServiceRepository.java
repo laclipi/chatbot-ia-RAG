@@ -20,4 +20,10 @@ public interface OfferedServiceRepository
 
         // Devuelve únicamente los servicios activos de un negocio.
         List<OfferedService> findByBusinessIdAndActiveTrue(Long businessId);
+
+        // Busca un servicio por su ID y negocio, únicamente si está activo.
+        // Optional permite gestionar el caso en que no exista o esté desactivado.
+        Optional<OfferedService> findByIdAndBusinessIdAndActiveTrue(
+                        Long id,
+                        Long businessId);
 }

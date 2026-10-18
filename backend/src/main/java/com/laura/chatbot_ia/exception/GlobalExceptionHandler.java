@@ -64,4 +64,20 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
         }
 
+        // Devuelve HTTP 409 cuando una reserva entra en conflicto con otra existente.
+        @ExceptionHandler(AppointmentConflictException.class)
+        public ResponseEntity<ApiError> handleAppointmentConflict(
+                        AppointmentConflictException exception,
+                        HttpServletRequest request) {
+
+                // Construimos el error siguiendo el formato que ya utiliza la API.
+                ApiError apiError = new ApiError(
+                                HttpStatus.CONFLICT.value(),
+                                HttpStatus.CONFLICT.getReasonPhrase(),
+                                exception.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
+        }
+
 }

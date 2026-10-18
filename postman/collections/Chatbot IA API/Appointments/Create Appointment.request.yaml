@@ -1,0 +1,23 @@
+$kind: http-request
+url: http://localhost:8080/api/businesses/1/appointments
+method: POST
+body:
+  type: json
+  content: "\r
+
+    {\r
+
+    \  \"offeredServiceId\": 3,\r
+
+    \  \"customerName\": \"Laura Test\",\r
+
+    \  \"customerEmail\": \"laura.test@example.com\",\r
+
+    \  \"customerPhone\": \"600123456\",\r
+
+    \  \"startAt\": \"2026-10-20T10:00:00\"\r
+
+    }\r
+
+    \  "
+order: 1000
