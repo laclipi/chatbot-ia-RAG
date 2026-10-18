@@ -1,100 +1,68 @@
 
+// Comprobamos que ChatService obtiene el catálogo y delega la respuesta en el motor.
 package com.laura.chatbot_ia.service;
 
 import com.laura.chatbot_ia.entity.OfferedService;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-// Comprobamos que ChatService responde usando el catálogo del negocio.
+// Verificamos la coordinación entre el catálogo y el motor de respuestas.
 class ChatServiceTest {
 
-    // Verificamos que muestra los servicios registrados y sus datos.
+    // Comprobamos que delega la pregunta y los servicios del negocio al motor.
     @Test
-    void answerReturnsAvailableServices() {
-        // Simulamos el servicio que consulta el catálogo sin acceder a la base de
-        // datos.
+    void answerDelegatesToResponseEngine() {
+        // Simulamos las dependencias para no acceder a la base de datos ni a una API.
         OfferedServiceManager manager = mock(OfferedServiceManager.class);
+        ChatResponseEngine engine = mock(ChatResponseEngine.class);
         OfferedService service = mock(OfferedService.class);
+        List<OfferedService> services = List.of(service);
 
-        when(manager.findByBusinessId(1L)).thenReturn(List.of(service));
-        when(service.getName()).thenReturn("Consulta general");
-        when(service.getDescription()).thenReturn("Valoración inicial");
-        when(service.getPrice()).thenReturn(new BigDecimal("50.00"));
-        when(service.getDurationMinutes()).thenReturn(30);
+        when(manager.findByBusinessId(1L)).thenReturn(services);
+        when(engine.answer("¿Qué servicios ofrecéis?", services))
+                .thenReturn("Respuesta de prueba");
 
-        // Creamos el servicio bajo prueba con el catálogo simulado.
-        ChatService chatService = new ChatService(manager);
+        // Inyectamos las dos dependencias simuladas en el servicio bajo prueba.
+        ChatService chatService = new ChatService(manager, engine);
 
-        // Comprobamos que la respuesta incluye los datos del servicio registrado.
+        // Ejecutamos la consulta y comprobamos que devuelve la respuesta del motor.
         String answer = chatService.answer(1L, "¿Qué servicios ofrecéis?");
 
-        assertEquals(
-                "Estos son los servicios disponibles de este negocio:\n"
-                        + "\n- Consulta general: Valoración inicial"
-                        + " | Precio: 50.00 | Duración: 30 minutos",
-                answer);
+        assertEquals("Respuesta de prueba", answer);
+
+        // Verificamos que se consultó el negocio correcto y se llamó al motor.
+        verify(manager).findByBusinessId(1L);
+        verify(engine).answer("¿Qué servicios ofrecéis?", services);
     }
 
-    // Verificamos que no inventa servicios cuando el catálogo está vacío.
+    // Comprobamos que un catálogo vacío también se delega al motor.
     @Test
-    void answerReturnsMessageWhenCatalogIsEmpty() {
-        // Simulamos un negocio que todavía no tiene servicios.
+    void answerDelegatesWhenCatalogIsEmpty() {
+        // Simulamos un negocio sin servicios y un motor que genera su respuesta.
         OfferedServiceManager manager = mock(OfferedServiceManager.class);
-        when(manager.findByBusinessId(1L)).thenReturn(List.of());
+        ChatResponseEngine engine = mock(ChatResponseEngine.class);
+        List<OfferedService> services = List.of();
 
-        // Creamos el servicio bajo prueba y consultamos el catálogo vacío.
-        ChatService chatService = new ChatService(manager);
+        when(manager.findByBusinessId(1L)).thenReturn(services);
+        when(engine.answer("¿Qué servicios ofrecéis?", services))
+                .thenReturn(
+                        "Este negocio todavía no tiene servicios activos en su catálogo.");
+
+        // Creamos el servicio con sus dependencias simuladas.
+        ChatService chatService = new ChatService(manager, engine);
+
+        // Comprobamos que devuelve el mensaje preparado por el motor.
         String answer = chatService.answer(1L, "¿Qué servicios ofrecéis?");
 
         assertEquals(
                 "Este negocio todavía no tiene servicios activos en su catálogo.",
                 answer);
+        verify(engine).answer("¿Qué servicios ofrecéis?", services);
     }
-
-    // Comprobamos que una pregunta sobre el precio devuelve solo ese dato.
-    @Test
-    void answerReturnsPriceWhenAskedAboutSpecificService() {
-        // Simulamos un servicio del catálogo con precio y duración conocidos.
-        OfferedServiceManager manager = mock(OfferedServiceManager.class);
-        OfferedService service = mock(OfferedService.class);
-
-        when(manager.findByBusinessId(1L)).thenReturn(List.of(service));
-        when(service.getName()).thenReturn("Consulta general");
-        when(service.getPrice()).thenReturn(new BigDecimal("50.00"));
-
-        ChatService chatService = new ChatService(manager);
-
-        // Preguntamos el precio de un servicio concreto.
-        String answer = chatService.answer(
-                1L, "¿Cuánto cuesta la consulta general?");
-
-        assertEquals("El precio de Consulta general es 50.00 €.", answer);
-    }
-
-    // Comprobamos que una pregunta sobre la duración devuelve solo ese dato.
-    @Test
-    void answerReturnsDurationWhenAskedAboutSpecificService() {
-        // Simulamos un servicio del catálogo con una duración conocida.
-        OfferedServiceManager manager = mock(OfferedServiceManager.class);
-        OfferedService service = mock(OfferedService.class);
-
-        when(manager.findByBusinessId(1L)).thenReturn(List.of(service));
-        when(service.getName()).thenReturn("Consulta general");
-        when(service.getDurationMinutes()).thenReturn(30);
-
-        ChatService chatService = new ChatService(manager);
-
-        // Preguntamos cuánto dura un servicio concreto.
-        String answer = chatService.answer(
-                1L, "¿Cuánto dura la consulta general?");
-
-        assertEquals("La duración de Consulta general es 30 minutos.", answer);
-    }
-
 }
