@@ -115,4 +115,26 @@ public class AppointmentService {
 
         return appointmentRepository.save(appointment);
     }
+
+    // Confirma una reserva pendiente sin modificar sus datos ni su horario.
+    public Appointment confirm(Long businessId, Long appointmentId) {
+
+        // Buscamos la reserva dentro del negocio indicado.
+        Appointment appointment = appointmentRepository
+                .findByIdAndBusinessId(appointmentId, businessId)
+                .orElseThrow(() -> new AppointmentConflictException(
+                        "No existe esa reserva para el negocio indicado"));
+
+        // Solo se pueden confirmar reservas que todavía están pendientes.
+        if (appointment.getStatus() != AppointmentStatus.PENDING) {
+            throw new AppointmentConflictException(
+                    "Solo se pueden confirmar reservas pendientes");
+        }
+
+        // Actualizamos el estado y guardamos el cambio en la base de datos.
+        appointment.setStatus(AppointmentStatus.CONFIRMED);
+
+        return appointmentRepository.save(appointment);
+    }
+
 }

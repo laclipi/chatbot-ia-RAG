@@ -63,4 +63,21 @@ public class AppointmentController {
 
         return ResponseEntity.ok(response);
     }
+
+    // Confirma una reserva pendiente y devuelve su estado actualizado.
+    @PatchMapping("/{appointmentId}/confirm")
+    public ResponseEntity<AppointmentResponse> confirm(
+            @PathVariable Long businessId,
+            @PathVariable Long appointmentId) {
+
+        // Delegamos las reglas de confirmación al servicio.
+        Appointment appointment = appointmentService.confirm(businessId, appointmentId);
+
+        // Convertimos la entidad en un DTO para no exponerla directamente por la API.
+        AppointmentResponse response = AppointmentResponse.fromEntity(appointment);
+
+        // HTTP 200 indica que la confirmación se ha completado correctamente.
+        return ResponseEntity.ok(response);
+    }
+
 }

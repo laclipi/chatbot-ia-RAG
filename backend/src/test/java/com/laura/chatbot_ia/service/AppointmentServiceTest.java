@@ -155,6 +155,53 @@ class AppointmentServiceTest {
         verify(appointmentRepository).save(appointment);
     }
 
+    // Comprueba que confirmar una reserva pendiente cambia el estado y guarda el
+    // cambio.
+    @Test
+    void confirmChangesPendingStatusToConfirmedAndSavesAppointment() {
+        Long businessId = 1L;
+        Long appointmentId = 10L;
+
+        Appointment appointment = new Appointment();
+        appointment.setStatus(AppointmentStatus.PENDING);
+
+        when(appointmentRepository.findByIdAndBusinessId(appointmentId, businessId))
+                .thenReturn(Optional.of(appointment));
+
+        when(appointmentRepository.save(appointment)).thenReturn(appointment);
+
+        Appointment result = appointmentService.confirm(businessId, appointmentId);
+
+        assertSame(appointment, result);
+        assertEquals(AppointmentStatus.CONFIRMED, result.getStatus());
+
+        verify(appointmentRepository).save(appointment);
+    }
+
+    // Comprueba que una reserva cancelada no se puede confirmar ni guardar de
+    // nuevo.
+    @Test
+    void confirmThrowsConflictWhenAppointmentIsCancelled() {
+        Long businessId = 1L;
+        Long appointmentId = 10L;
+
+        Appointment appointment = new Appointment();
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+
+        when(appointmentRepository.findByIdAndBusinessId(appointmentId, businessId))
+                .thenReturn(Optional.of(appointment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.laura.chatbot_ia.exception.AppointmentConflictException.class,
+                () -> appointmentService.confirm(businessId, appointmentId));
+
+        // Verificamos que el estado no se persiste cuando la confirmación no es válida.
+        org.mockito.Mockito.verify(
+                appointmentRepository,
+                org.mockito.Mockito.never())
+                .save(any(Appointment.class));
+    }
+
     // Comprueba que el servicio devuelve las reservas asociadas al negocio
     // indicado.
     @Test
