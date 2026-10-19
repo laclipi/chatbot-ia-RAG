@@ -80,4 +80,22 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
         }
 
+        // Devuelve HTTP 409 cuando el email ya está registrado.
+        // ResponseEntity escribe el estado y el cuerpo en esta misma petición.
+        // ResponseStatusException llamaría a sendError, el contenedor reenviaría
+        // a /error y Spring Security convertiría ese reenvío en 403.
+        @ExceptionHandler(EmailAlreadyRegisteredException.class)
+        public ResponseEntity<ApiError> handleEmailAlreadyRegistered(
+                        EmailAlreadyRegisteredException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                HttpStatus.CONFLICT.value(),
+                                HttpStatus.CONFLICT.getReasonPhrase(),
+                                exception.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
+        }
+
 }
