@@ -8,6 +8,12 @@ import com.laura.chatbot_ia.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+// Importa el DTO de entrada del login.
+import com.laura.chatbot_ia.dto.LoginRequest;
+// Permite generar el token de acceso.
+import com.laura.chatbot_ia.security.JwtService;
+// Permite responder con un error HTTP de credenciales no válidas.
+import org.springframework.security.authentication.BadCredentialsException;
 
 // Contiene la lógica de negocio relacionada con las cuentas de usuario.
 @Service
@@ -15,13 +21,17 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    // Servicio responsable de generar y validar tokens JWT.
+    private final JwtService jwtService;
 
-    // Spring inyecta el repositorio y el codificador de contraseñas.
+    // Spring inyecta las dependencias necesarias para registro y autenticación.
     public UserService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     // Registra una cuenta y guarda únicamente el hash de su contraseña.
@@ -46,5 +56,25 @@ public class UserService {
 
         // Persiste la cuenta y devuelve la entidad guardada.
         return userRepository.save(user);
+    }
+
+    // Verifica las credenciales y genera un JWT si son correctas.
+    @Transactional(readOnly = true)
+    public String login(LoginRequest request) {
+
+        // Normaliza el email igual que en el registro.
+        String email = request.email().trim().toLowerCase();
+
+        // Si no existe la cuenta, devuelve un error de credenciales.
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas"));
+
+        // Compara la contraseña recibida con el hash BCrypt almacenado.
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new BadCredentialsException("Credenciales incorrectas");
+        }
+
+        // Solo genera el token después de validar las credenciales.
+        return jwtService.generateToken(user.getEmail());
     }
 }

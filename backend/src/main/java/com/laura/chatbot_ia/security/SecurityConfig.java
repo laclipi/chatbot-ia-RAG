@@ -5,28 +5,45 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 // Centraliza las reglas de acceso y el cifrado de contraseñas.
 @Configuration
 public class SecurityConfig {
 
-    // Permite registrar cuentas sin autenticación y protege las demás rutas.
-    // Define las reglas de acceso para la API REST.
+    // Permite registrar e iniciar sesión sin token y protege las demás rutas.
+    // Configura la API para autenticar cada petición mediante JWT, sin sesiones.
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtService jwtService) throws Exception {
 
-        // Desactiva CSRF porque la API se preparará para autenticación JWT sin sesión.
+        // Desactiva CSRF porque la API utiliza autenticación mediante Bearer JWT.
         http.csrf(csrf -> csrf.disable());
 
-        // Permite el registro público y exige autenticación para el resto de rutas.
+        // Evita que Spring Security cree o utilice sesiones HTTP.
+        http.sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // Permite el registro y el login; exige autenticación para las demás rutas.
         http.authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/auth/register",
+                        "/api/auth/login")
+                .permitAll()
                 .anyRequest().authenticated());
 
-        // Construye la cadena de filtros con las reglas anteriores.
+        // Registra nuestro filtro JWT antes del filtro de usuario y contraseña.
+        http.addFilterBefore(
+                new JwtAuthenticationFilter(jwtService),
+                UsernamePasswordAuthenticationFilter.class);
+
+        // Construye la cadena de filtros con todas las reglas configuradas.
         return http.build();
     }
 

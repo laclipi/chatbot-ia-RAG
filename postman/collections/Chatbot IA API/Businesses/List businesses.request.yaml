@@ -3,12 +3,15 @@ description: |-
   Lista los negocios registrados.
   Espera HTTP 200 y un array JSON, vacio si aun no hay datos.
   Cada elemento expone id, name, contactEmail, phoneNumber y active.
-url: '{{baseUrl}}/api/businesses'
+url: "{{baseUrl}}/api/businesses"
 method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
 order: 1000
 scripts:
   - type: afterResponse
-    language: text/javascript
     code: |-
       pm.test("HTTP 200", function () {
           pm.response.to.have.status(200);
@@ -25,3 +28,4 @@ scripts:
               pm.expect(business.active).to.be.a("boolean");
           });
       });
+    language: text/javascript

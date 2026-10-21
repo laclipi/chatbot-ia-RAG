@@ -1,0 +1,21 @@
+$kind: http-request
+url: http://localhost:8080/api/auth/login
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"prueba.postman.20261019@example.com\",\r
+
+    \  \"password\": \"PruebaSegura2026!\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "// Guarda el JWT del login en una variable de la colección para reutilizarlo.\r
+
+      const body = pm.response.json();\r
+
+      pm.collectionVariables.set(\"accessToken\", body.accessToken);"
+    language: text/javascript
+order: 2000
