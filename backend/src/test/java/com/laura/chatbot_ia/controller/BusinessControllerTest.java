@@ -1,18 +1,24 @@
 package com.laura.chatbot_ia.controller;
 
 import com.laura.chatbot_ia.entity.Business;
+import com.laura.chatbot_ia.exception.AuthenticatedUserNotFoundException;
 import com.laura.chatbot_ia.service.BusinessService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -31,6 +37,8 @@ class BusinessControllerTest {
 
     @MockitoBean
     private BusinessService businessService;
+
+    private static final String AUTHENTICATED_EMAIL = "ana@clinica.es";
 
     // Comprobamos que el listado vacío devuelve HTTP 200 y un array JSON.
     @Test
@@ -99,9 +107,11 @@ class BusinessControllerTest {
                 "contacto@clinica-demo.es",
                 "600123456");
 
-        when(businessService.save(any(Business.class))).thenReturn(savedBusiness);
+        when(businessService.create(any(Business.class), eq(AUTHENTICATED_EMAIL)))
+                .thenReturn(savedBusiness);
 
         mockMvc.perform(post("/api/businesses")
+                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -116,7 +126,7 @@ class BusinessControllerTest {
                 .andExpect(jsonPath("$.phoneNumber").value("600123456"))
                 .andExpect(jsonPath("$.active").value(true));
 
-        verify(businessService).save(any(Business.class));
+        verify(businessService).create(any(Business.class), eq(AUTHENTICATED_EMAIL));
     }
 
     // Comprobamos que el correo es opcional al crear un negocio.
@@ -125,9 +135,11 @@ class BusinessControllerTest {
         Business savedBusiness = new Business();
         savedBusiness.setName("Clínica Demo");
 
-        when(businessService.save(any(Business.class))).thenReturn(savedBusiness);
+        when(businessService.create(any(Business.class), eq(AUTHENTICATED_EMAIL)))
+                .thenReturn(savedBusiness);
 
         mockMvc.perform(post("/api/businesses")
+                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -137,7 +149,7 @@ class BusinessControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Clínica Demo"));
 
-        verify(businessService).save(any(Business.class));
+        verify(businessService).create(any(Business.class), eq(AUTHENTICATED_EMAIL));
     }
 
     // Comprobamos que un nombre de 150 caracteres, el máximo permitido, se acepta.
@@ -147,9 +159,11 @@ class BusinessControllerTest {
         Business savedBusiness = new Business();
         savedBusiness.setName(name);
 
-        when(businessService.save(any(Business.class))).thenReturn(savedBusiness);
+        when(businessService.create(any(Business.class), eq(AUTHENTICATED_EMAIL)))
+                .thenReturn(savedBusiness);
 
         mockMvc.perform(post("/api/businesses")
+                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -159,7 +173,7 @@ class BusinessControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value(name));
 
-        verify(businessService).save(any(Business.class));
+        verify(businessService).create(any(Business.class), eq(AUTHENTICATED_EMAIL));
     }
 
     // Comprobamos que un nombre en blanco devuelve HTTP 400.
@@ -220,6 +234,87 @@ class BusinessControllerTest {
                 .andExpect(jsonPath("$.path").value("/api/businesses"));
 
         verifyNoInteractions(businessService);
+    }
+
+    // Comprobamos que un email autenticado sin cuenta devuelve HTTP 401.
+    @Test
+    void createReturnsUnauthorizedWhenAuthenticatedUserDoesNotExist() throws Exception {
+        when(businessService.create(any(Business.class), eq(AUTHENTICATED_EMAIL)))
+                .thenThrow(new AuthenticatedUserNotFoundException());
+
+        mockMvc.perform(post("/api/businesses")
+                .with(authenticatedUser(AUTHENTICATED_EMAIL))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Clínica Demo"
+                        }
+                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message")
+                        .value("No existe una cuenta para el usuario autenticado"))
+                .andExpect(jsonPath("$.path").value("/api/businesses"));
+
+        verify(businessService).create(any(Business.class), eq(AUTHENTICATED_EMAIL));
+    }
+
+    // Comprobamos que una petición sin identidad no crea el negocio.
+    @Test
+    void createReturnsUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(post("/api/businesses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Clínica Demo"
+                        }
+                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message")
+                        .value("No existe una cuenta para el usuario autenticado"))
+                .andExpect(jsonPath("$.path").value("/api/businesses"));
+
+        verifyNoInteractions(businessService);
+    }
+
+    // Comprobamos que la autenticación anónima de Spring Security no actúa como autora.
+    @Test
+    void createReturnsUnauthorizedWhenAuthenticationIsAnonymous() throws Exception {
+        AnonymousAuthenticationToken anonymous = new AnonymousAuthenticationToken(
+                "key",
+                "anonymousUser",
+                AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
+
+        mockMvc.perform(post("/api/businesses")
+                .with(request -> {
+                    request.setUserPrincipal(anonymous);
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Clínica Demo"
+                        }
+                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message")
+                        .value("No existe una cuenta para el usuario autenticado"))
+                .andExpect(jsonPath("$.path").value("/api/businesses"));
+
+        verifyNoInteractions(businessService);
+    }
+
+    // Deja en la petición el mismo principal que el filtro JWT guarda al validar el token.
+    private RequestPostProcessor authenticatedUser(String email) {
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(email, null, List.of());
+        return request -> {
+            request.setUserPrincipal(authentication);
+            return request;
+        };
     }
 
     private Business business(String name, String contactEmail, String phoneNumber) {

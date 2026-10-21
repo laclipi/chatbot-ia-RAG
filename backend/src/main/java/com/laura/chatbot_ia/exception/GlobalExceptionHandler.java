@@ -98,4 +98,20 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
         }
 
+        // Devuelve 401 cuando el email del token no tiene una cuenta.
+        // ResponseEntity evita que Spring Security convierta el error en 403.
+        @ExceptionHandler(AuthenticatedUserNotFoundException.class)
+        public ResponseEntity<ApiError> handleAuthenticatedUserNotFound(
+                        AuthenticatedUserNotFoundException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                HttpStatus.UNAUTHORIZED.value(),
+                                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                                exception.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
+        }
+
 }
