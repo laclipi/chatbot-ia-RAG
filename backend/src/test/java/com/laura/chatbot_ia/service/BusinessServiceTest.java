@@ -4,6 +4,7 @@ import com.laura.chatbot_ia.entity.Business;
 import com.laura.chatbot_ia.entity.BusinessMembership;
 import com.laura.chatbot_ia.entity.User;
 import com.laura.chatbot_ia.exception.AuthenticatedUserNotFoundException;
+import com.laura.chatbot_ia.exception.BusinessAccessDeniedException;
 import com.laura.chatbot_ia.repository.BusinessMembershipRepository;
 import com.laura.chatbot_ia.repository.BusinessRepository;
 import com.laura.chatbot_ia.repository.UserRepository;
@@ -42,59 +43,83 @@ class BusinessServiceTest {
     @InjectMocks
     private BusinessService businessService;
 
-    // Comprobamos que el listado devuelve lo que entrega el repositorio.
+    // Comprobamos que el listado contiene solo los negocios de las membresías del usuario.
     @Test
-    void findAllReturnsBusinessesFromRepository() {
-        Business business = new Business();
-        business.setName("Clínica Demo");
+    void findAllReturnsBusinessesLinkedToTheAuthenticatedUser() {
+        User owner = new User();
+        owner.setEmail("ana@clinica.es");
 
-        when(businessRepository.findAll()).thenReturn(List.of(business));
+        Business ownBusiness = new Business();
+        ownBusiness.setName("Clínica de Ana");
 
-        List<Business> result = businessService.findAll();
+        BusinessMembership membership = new BusinessMembership();
+        membership.setUser(owner);
+        membership.setBusiness(ownBusiness);
+
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.of(owner));
+        when(businessMembershipRepository.findByUserId(owner.getId()))
+                .thenReturn(List.of(membership));
+
+        List<Business> result = businessService.findAll("  Ana@Clinica.es  ");
 
         assertEquals(1, result.size());
-        assertSame(business, result.get(0));
-        verify(businessRepository).findAll();
+        assertSame(ownBusiness, result.get(0));
+        verify(businessRepository, never()).findAll();
     }
 
-    // Comprobamos que un catálogo vacío se devuelve sin transformarlo.
+    // Comprobamos que un usuario sin membresías recibe un listado vacío.
     @Test
-    void findAllReturnsEmptyListWhenRepositoryIsEmpty() {
-        when(businessRepository.findAll()).thenReturn(List.of());
+    void findAllReturnsEmptyListWhenUserHasNoMemberships() {
+        User owner = new User();
+        owner.setEmail("ana@clinica.es");
 
-        List<Business> result = businessService.findAll();
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.of(owner));
+        when(businessMembershipRepository.findByUserId(owner.getId())).thenReturn(List.of());
+
+        List<Business> result = businessService.findAll("ana@clinica.es");
 
         assertTrue(result.isEmpty());
-        verify(businessRepository).findAll();
+        verify(businessRepository, never()).findAll();
     }
 
-    // Comprobamos que la búsqueda devuelve el negocio cuando existe.
+    // Comprobamos que un miembro recibe su negocio.
     @Test
-    void findByIdReturnsBusinessWhenItExists() {
+    void findByIdReturnsBusinessWhenUserIsMember() {
         Long businessId = 1L;
+        User owner = new User();
+        owner.setEmail("ana@clinica.es");
         Business business = new Business();
-        business.setName("Clínica Demo");
+        business.setName("Clínica de Ana");
 
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.of(owner));
+        when(businessMembershipRepository.existsByUserIdAndBusinessId(owner.getId(), businessId))
+                .thenReturn(true);
         when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
 
-        Optional<Business> result = businessService.findById(businessId);
+        Optional<Business> result = businessService.findById(businessId, "ana@clinica.es");
 
         assertTrue(result.isPresent());
         assertSame(business, result.orElseThrow());
         verify(businessRepository).findById(businessId);
     }
 
-    // Comprobamos que la búsqueda queda vacía cuando el negocio no existe.
+    // Comprobamos que un negocio ajeno no se consulta ni se devuelve.
     @Test
-    void findByIdReturnsEmptyWhenBusinessDoesNotExist() {
-        Long businessId = 99L;
+    void findByIdThrowsWhenUserIsNotMember() {
+        Long businessId = 2L;
+        User owner = new User();
+        owner.setEmail("ana@clinica.es");
 
-        when(businessRepository.findById(businessId)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.of(owner));
+        when(businessMembershipRepository.existsByUserIdAndBusinessId(owner.getId(), businessId))
+                .thenReturn(false);
 
-        Optional<Business> result = businessService.findById(businessId);
+        BusinessAccessDeniedException exception = assertThrows(
+                BusinessAccessDeniedException.class,
+                () -> businessService.findById(businessId, "ana@clinica.es"));
 
-        assertTrue(result.isEmpty());
-        verify(businessRepository).findById(businessId);
+        assertEquals("No perteneces a ese negocio", exception.getMessage());
+        verify(businessRepository, never()).findById(any());
     }
 
     // Comprobamos que guardar delega en el repositorio y devuelve el resultado.
@@ -176,5 +201,75 @@ class BusinessServiceTest {
         verify(userRepository, never()).findByEmail(any());
         verify(businessRepository, never()).save(any());
         verify(businessMembershipRepository, never()).save(any());
+    }
+
+    // Comprobamos que un email con otra capitalización encuentra su membresía.
+    @Test
+    void requireMembershipReturnsUserWhenMembershipExists() {
+        Long businessId = 4L;
+        User owner = new User();
+        owner.setEmail("ana@clinica.es");
+
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.of(owner));
+        when(businessMembershipRepository.existsByUserIdAndBusinessId(owner.getId(), businessId))
+                .thenReturn(true);
+
+        User result = businessService.requireMembership("  Ana@Clinica.es  ", businessId);
+
+        assertSame(owner, result);
+        verify(userRepository).findByEmail("ana@clinica.es");
+        verify(businessMembershipRepository)
+                .existsByUserIdAndBusinessId(owner.getId(), businessId);
+    }
+
+    // Comprobamos que un email sin cuenta no llega a consultar la membresía.
+    @Test
+    void requireMembershipThrowsWhenUserDoesNotExist() {
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.empty());
+
+        AuthenticatedUserNotFoundException exception = assertThrows(
+                AuthenticatedUserNotFoundException.class,
+                () -> businessService.requireMembership("ana@clinica.es", 4L));
+
+        assertEquals(
+                "No existe una cuenta para el usuario autenticado",
+                exception.getMessage());
+        verify(businessMembershipRepository, never())
+                .existsByUserIdAndBusinessId(any(), any());
+    }
+
+    // Comprobamos que un usuario sin pertenencia recibe un acceso denegado.
+    @Test
+    void requireMembershipThrowsWhenMembershipDoesNotExist() {
+        Long businessId = 4L;
+        User owner = new User();
+        owner.setEmail("ana@clinica.es");
+
+        when(userRepository.findByEmail("ana@clinica.es")).thenReturn(Optional.of(owner));
+        when(businessMembershipRepository.existsByUserIdAndBusinessId(owner.getId(), businessId))
+                .thenReturn(false);
+
+        BusinessAccessDeniedException exception = assertThrows(
+                BusinessAccessDeniedException.class,
+                () -> businessService.requireMembership("ana@clinica.es", businessId));
+
+        assertEquals("No perteneces a ese negocio", exception.getMessage());
+        verify(businessMembershipRepository)
+                .existsByUserIdAndBusinessId(owner.getId(), businessId);
+    }
+
+    // Comprobamos que un email ausente no se busca ni consulta membresías.
+    @Test
+    void requireMembershipThrowsWhenEmailIsMissing() {
+        assertThrows(
+                AuthenticatedUserNotFoundException.class,
+                () -> businessService.requireMembership(null, 4L));
+        assertThrows(
+                AuthenticatedUserNotFoundException.class,
+                () -> businessService.requireMembership("   ", 4L));
+
+        verify(userRepository, never()).findByEmail(any());
+        verify(businessMembershipRepository, never())
+                .existsByUserIdAndBusinessId(any(), any());
     }
 }

@@ -114,4 +114,19 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
         }
 
+        // Devuelve 403 cuando el usuario autenticado no pertenece al negocio.
+        @ExceptionHandler(BusinessAccessDeniedException.class)
+        public ResponseEntity<ApiError> handleBusinessAccessDenied(
+                        BusinessAccessDeniedException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                HttpStatus.FORBIDDEN.value(),
+                                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                                exception.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
+        }
+
 }

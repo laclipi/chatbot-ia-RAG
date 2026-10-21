@@ -5,6 +5,7 @@ import com.laura.chatbot_ia.entity.Business;
 import com.laura.chatbot_ia.entity.BusinessMembership;
 import com.laura.chatbot_ia.entity.User;
 import com.laura.chatbot_ia.exception.AuthenticatedUserNotFoundException;
+import com.laura.chatbot_ia.exception.BusinessAccessDeniedException;
 import com.laura.chatbot_ia.repository.BusinessMembershipRepository;
 import com.laura.chatbot_ia.repository.BusinessRepository;
 import com.laura.chatbot_ia.repository.UserRepository;
@@ -32,14 +33,20 @@ public class BusinessService {
         this.businessMembershipRepository = businessMembershipRepository;
     }
 
-    // Recupera todos los negocios registrados.
-    public List<Business> findAll() {
-        return businessRepository.findAll();
+    // Devuelve solo los negocios vinculados al email autenticado.
+    @Transactional(readOnly = true)
+    public List<Business> findAll(String email) {
+        User user = findAuthenticatedUser(email);
+
+        return businessMembershipRepository.findByUserId(user.getId())
+                .stream()
+                .map(BusinessMembership::getBusiness)
+                .toList();
     }
 
-    // Busca un negocio por su ID.
-    // Optional representa que el negocio puede existir o no.
-    public Optional<Business> findById(Long id) {
+    // Comprueba la pertenencia antes de buscar el negocio.
+    public Optional<Business> findById(Long id, String email) {
+        requireMembership(email, id);
         return businessRepository.findById(id);
     }
 
@@ -70,5 +77,31 @@ public class BusinessService {
         businessMembershipRepository.save(membership);
 
         return savedBusiness;
+    }
+
+    // Comprueba que el email pertenece al negocio antes de leer o modificar sus datos.
+    @Transactional(readOnly = true)
+    public User requireMembership(String email, Long businessId) {
+        User user = findAuthenticatedUser(email);
+
+        boolean member = businessMembershipRepository
+                .existsByUserIdAndBusinessId(user.getId(), businessId);
+
+        if (!member) {
+            throw new BusinessAccessDeniedException("No perteneces a ese negocio");
+        }
+
+        return user;
+    }
+
+    // Resuelve la cuenta del email con la misma normalización que el registro y el login.
+    private User findAuthenticatedUser(String email) {
+        if (email == null || email.isBlank()) {
+            throw new AuthenticatedUserNotFoundException();
+        }
+
+        String normalizedEmail = email.trim().toLowerCase();
+        return userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(AuthenticatedUserNotFoundException::new);
     }
 }

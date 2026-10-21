@@ -2,6 +2,7 @@ package com.laura.chatbot_ia.controller;
 
 import com.laura.chatbot_ia.entity.Business;
 import com.laura.chatbot_ia.exception.AuthenticatedUserNotFoundException;
+import com.laura.chatbot_ia.exception.BusinessAccessDeniedException;
 import com.laura.chatbot_ia.service.BusinessService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,14 +44,15 @@ class BusinessControllerTest {
     // Comprobamos que el listado vacío devuelve HTTP 200 y un array JSON.
     @Test
     void findAllReturnsOkAndEmptyList() throws Exception {
-        when(businessService.findAll()).thenReturn(List.of());
+        when(businessService.findAll(AUTHENTICATED_EMAIL)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/businesses"))
+        mockMvc.perform(get("/api/businesses")
+                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(businessService).findAll();
+        verify(businessService).findAll(AUTHENTICATED_EMAIL);
     }
 
     // Comprobamos que el listado devuelve los datos públicos del negocio.
@@ -58,16 +60,18 @@ class BusinessControllerTest {
     void findAllReturnsOkAndBusinessData() throws Exception {
         Business business = business("Clínica Demo", "contacto@clinica-demo.es", "600123456");
 
-        when(businessService.findAll()).thenReturn(List.of(business));
+        when(businessService.findAll(AUTHENTICATED_EMAIL)).thenReturn(List.of(business));
 
-        mockMvc.perform(get("/api/businesses"))
+        mockMvc.perform(get("/api/businesses")
+                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].name").value("Clínica Demo"))
                 .andExpect(jsonPath("$[0].contactEmail").value("contacto@clinica-demo.es"))
                 .andExpect(jsonPath("$[0].phoneNumber").value("600123456"))
                 .andExpect(jsonPath("$[0].active").value(true));
 
-        verify(businessService).findAll();
+        verify(businessService).findAll(AUTHENTICATED_EMAIL);
     }
 
     // Comprobamos que consultar un negocio existente devuelve HTTP 200.
@@ -75,28 +79,48 @@ class BusinessControllerTest {
     void findByIdReturnsOkWhenBusinessExists() throws Exception {
         Business business = business("Clínica Demo", "contacto@clinica-demo.es", "600123456");
 
-        when(businessService.findById(1L)).thenReturn(Optional.of(business));
+        when(businessService.findById(1L, AUTHENTICATED_EMAIL)).thenReturn(Optional.of(business));
 
-        mockMvc.perform(get("/api/businesses/{id}", 1L))
+        mockMvc.perform(get("/api/businesses/{id}", 1L)
+                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Clínica Demo"))
                 .andExpect(jsonPath("$.contactEmail").value("contacto@clinica-demo.es"))
                 .andExpect(jsonPath("$.phoneNumber").value("600123456"))
                 .andExpect(jsonPath("$.active").value(true));
 
-        verify(businessService).findById(1L);
+        verify(businessService).findById(1L, AUTHENTICATED_EMAIL);
     }
 
     // Comprobamos que un negocio inexistente devuelve HTTP 404 sin cuerpo.
     @Test
     void findByIdReturnsNotFoundWhenBusinessDoesNotExist() throws Exception {
-        when(businessService.findById(99L)).thenReturn(Optional.empty());
+        when(businessService.findById(99L, AUTHENTICATED_EMAIL)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/businesses/{id}", 99L))
+        mockMvc.perform(get("/api/businesses/{id}", 99L)
+                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(""));
 
-        verify(businessService).findById(99L);
+        verify(businessService).findById(99L, AUTHENTICATED_EMAIL);
+    }
+
+    // Comprobamos que el negocio de otro usuario responde 403 y no incluye sus datos.
+    @Test
+    void findByIdReturnsForbiddenWhenUserIsNotMember() throws Exception {
+        when(businessService.findById(2L, AUTHENTICATED_EMAIL))
+                .thenThrow(new BusinessAccessDeniedException("No perteneces a ese negocio"));
+
+        mockMvc.perform(get("/api/businesses/{id}", 2L)
+                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                .andExpect(jsonPath("$.path").value("/api/businesses/2"))
+                .andExpect(jsonPath("$.name").doesNotExist());
+
+        verify(businessService).findById(2L, AUTHENTICATED_EMAIL);
     }
 
     // Comprobamos que crear un negocio válido devuelve HTTP 201.

@@ -28,15 +28,19 @@ public class BusinessController {
     }
 
     // GET /api/businesses
-    // Devuelve la lista de negocios registrados.
+    // Devuelve solo los negocios del usuario autenticado.
     @GetMapping
-    public List<Business> findAll() {
-        return businessService.findAll();
+    public List<Business> findAll(Authentication authentication) {
+        return businessService.findAll(authenticatedEmail(authentication));
     }
 
+    // GET /api/businesses/{id}
+    // Exige pertenencia antes de devolver el negocio.
     @GetMapping("/{id}")
-    public ResponseEntity<Business> findById(@PathVariable Long id) {
-        return businessService.findById(id)
+    public ResponseEntity<Business> findById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        return businessService.findById(id, authenticatedEmail(authentication))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
