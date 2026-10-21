@@ -1,4 +1,7 @@
 $kind: http-request
-url: http://localhost:8080/api/businesses/1/appointments/3/confirm
+description: |-
+  Confirma la reserva {{appointmentId}} mientras sigue pendiente.
+  Hereda el Bearer de la colección. Se ejecuta antes de Cancel Appointment.
+url: '{{baseUrl}}/api/businesses/{{businessId}}/appointments/{{appointmentId}}/confirm'
 method: PATCH
-order: 4000
+order: 3000

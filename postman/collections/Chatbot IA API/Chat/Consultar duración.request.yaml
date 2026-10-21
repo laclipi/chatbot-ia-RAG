@@ -1,12 +1,14 @@
 $kind: http-request
 description: Chat público. No envía token ni exige pertenencia al negocio.
-url: http://localhost:8080/api/businesses/1/chat
+url: '{{baseUrl}}/api/businesses/{{businessId}}/chat'
 method: POST
+headers:
+  - key: Content-Type
+    value: application/json
 body:
   type: json
-  content: "{\r
-
-    \  \"message\": \"¿Cuánto dura la consulta general?\"\r
-
-    }"
+  content: |-
+    {
+      "message": "¿Cuánto dura la consulta general?"
+    }
 order: 3000

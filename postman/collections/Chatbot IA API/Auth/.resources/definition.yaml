@@ -4,4 +4,4 @@ description: |-
   Registro y login públicos. No envían el token de la colección.
 auth:
   type: noauth
-order: 7000
+order: 1000

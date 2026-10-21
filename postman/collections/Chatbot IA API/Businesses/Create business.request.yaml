@@ -33,4 +33,5 @@ scripts:
           pm.expect(body.contactEmail).to.eql("contacto@clinica-demo.es");
           pm.expect(body.phoneNumber).to.eql("600123456");
           pm.expect(body.active).to.eql(true);
+          pm.collectionVariables.set("businessId", String(body.id));
       });

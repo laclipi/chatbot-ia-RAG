@@ -3,7 +3,8 @@ description: |-
   Crea un servicio para el negocio indicado.
   El cuerpo admite name, description, price y durationMinutes. No admite active.
   Espera HTTP 201 y un servicio activo. Esta peticion escribe en la base de datos.
-  El negocio de la ruta debe existir; si no, la API responde HTTP 404.
+  Usa {{businessId}}, guardado por Create business. Si el usuario no pertenece
+  a ese negocio, la API responde HTTP 403. Guarda offeredServiceId para la reserva.
 url: '{{baseUrl}}/api/businesses/:businessId/services'
 method: POST
 order: 4000
@@ -12,8 +13,8 @@ headers:
     value: application/json
 pathVariables:
   - key: businessId
-    value: '1'
-    description: Identificador del negocio al que se asocia el servicio. Debe existir.
+    value: '{{businessId}}'
+    description: Identificador guardado por Create business. El valor inicial de la colección es 1.
 body:
   type: json
   content: |-
@@ -39,4 +40,5 @@ scripts:
           pm.expect(body.price).to.eql(35);
           pm.expect(body.durationMinutes).to.eql(30);
           pm.expect(body.active).to.eql(true);
+          pm.collectionVariables.set("offeredServiceId", String(body.id));
       });

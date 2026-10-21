@@ -1,4 +1,5 @@
 $kind: http-request
-url: http://localhost:8080/api/businesses/1/appointments
+description: Lista las reservas del negocio {{businessId}}. Hereda el Bearer de la colección.
+url: '{{baseUrl}}/api/businesses/{{businessId}}/appointments'
 method: GET
 order: 2000

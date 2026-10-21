@@ -5,4 +5,4 @@ description: |-
   El cliente no necesita cuenta ni pertenencia; la ruta indica el negocio.
 auth:
   type: noauth
-order: 5000
+order: 6000

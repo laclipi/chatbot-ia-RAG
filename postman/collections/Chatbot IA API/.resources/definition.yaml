@@ -3,9 +3,19 @@ description: |-
   Pruebas de la API de Chatbot IA, derivadas de los controladores REST.
   Las peticiones administrativas heredan el token {{accessToken}} que guarda el login.
   La carpeta Chat no envía token: el cliente público no necesita cuenta ni pertenencia.
+  El orden de carpetas es Auth, Health, Businesses, Offered Services, Validation, Chat y Appointments.
+  Register y Login comparten userEmail y userPassword.
+  Create business guarda businessId, Create service guarda offeredServiceId
+  y Create Appointment guarda appointmentId.
 variables:
   baseUrl: http://localhost:8080
   accessToken: ""
+  userEmail: gestor.prueba@example.com
+  userPassword: PruebaSegura2026!
+  businessId: "1"
+  offeredServiceId: "1"
+  appointmentId: "1"
+  appointmentStartAt: "2030-06-15T10:00:00"
 auth:
   type: bearer
   credentials:

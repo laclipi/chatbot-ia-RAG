@@ -1,2 +1,6 @@
 $kind: collection
-order: 6000
+description: |-
+  Reservas del negocio {{businessId}}. Heredan el Bearer de la colección.
+  Create Appointment usa {{offeredServiceId}}, calcula una fecha futura
+  y guarda {{appointmentId}}. Confirm se ejecuta antes que Cancel.
+order: 7000

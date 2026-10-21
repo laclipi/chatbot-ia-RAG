@@ -1,8 +1,8 @@
 $kind: http-request
 description: |-
-  Intenta crear un servicio valido para un negocio que no existe.
-  La validación del cuerpo pasa y el gestor responde HTTP 404.
-  El negocio 99 no debe existir. No se guarda el servicio.
+  Intenta crear un servicio en un negocio al que el usuario no pertenece.
+  La validación del cuerpo pasa y la pertenencia responde HTTP 403.
+  No se guarda el servicio.
 url: '{{baseUrl}}/api/businesses/:businessId/services'
 method: POST
 order: 4000
@@ -12,7 +12,7 @@ headers:
 pathVariables:
   - key: businessId
     value: '99'
-    description: Identificador de un negocio que no debe existir.
+    description: Identificador de un negocio al que esta cuenta no pertenece.
 body:
   type: json
   content: |-
@@ -26,12 +26,12 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("HTTP 404 y negocio inexistente", function () {
-          pm.response.to.have.status(404);
+      pm.test("HTTP 403 sin pertenencia", function () {
+          pm.response.to.have.status(403);
           const body = pm.response.json();
-          pm.expect(body.status).to.eql(404);
-          pm.expect(body.error).to.eql("Not Found");
-          pm.expect(body.message).to.eql("No existe un negocio con ID 99");
+          pm.expect(body.status).to.eql(403);
+          pm.expect(body.error).to.eql("Forbidden");
+          pm.expect(body.message).to.eql("No perteneces a ese negocio");
           pm.expect(body.path).to.eql("/api/businesses/99/services");
           pm.expect(body).to.have.property("timestamp");
       });

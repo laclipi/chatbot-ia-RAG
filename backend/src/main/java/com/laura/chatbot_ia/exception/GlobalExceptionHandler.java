@@ -98,6 +98,22 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
         }
 
+        // Devuelve 401 cuando el email no existe o la contraseña no coincide.
+        // ResponseEntity escribe el ApiError en esta petición y conserva el 401.
+        @ExceptionHandler(InvalidCredentialsException.class)
+        public ResponseEntity<ApiError> handleInvalidCredentials(
+                        InvalidCredentialsException exception,
+                        HttpServletRequest request) {
+
+                ApiError apiError = new ApiError(
+                                HttpStatus.UNAUTHORIZED.value(),
+                                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                                exception.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
+        }
+
         // Devuelve 401 cuando el email del token no tiene una cuenta.
         // ResponseEntity evita que Spring Security convierta el error en 403.
         @ExceptionHandler(AuthenticatedUserNotFoundException.class)

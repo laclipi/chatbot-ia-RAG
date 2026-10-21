@@ -1,4 +1,6 @@
 $kind: collection
 name: Health
-description: Comprueba que la API responde.
-order: 1000
+description: |-
+  Comprueba que la API responde cuando la petición ya lleva el Bearer de la colección.
+  Sin token sigue cerrada: no es un endpoint público.
+order: 2000

@@ -3,4 +3,4 @@ name: Businesses
 description: |-
   Operaciones de éxito sobre /api/businesses.
   Existen listar, consultar por id y crear. No hay actualizar ni eliminar.
-order: 2000
+order: 3000

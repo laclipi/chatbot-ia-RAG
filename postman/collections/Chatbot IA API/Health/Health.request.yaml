@@ -1,7 +1,8 @@
 $kind: http-request
 description: |-
-  Comprueba que la API responde.
-  GET /api/health devuelve HTTP 200 y el texto "Chatbot IA API is running".
+  Comprueba que la API responde con el Bearer heredado de la colección.
+  Hay que ejecutar Login User antes. Sin token la ruta sigue cerrada y responde 403.
+  Con token, GET /api/health devuelve HTTP 200 y el texto "Chatbot IA API is running".
 url: '{{baseUrl}}/api/health'
 method: GET
 order: 1000

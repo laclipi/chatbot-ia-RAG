@@ -4,6 +4,7 @@ package com.laura.chatbot_ia.service;
 import com.laura.chatbot_ia.dto.RegisterRequest;
 import com.laura.chatbot_ia.entity.User;
 import com.laura.chatbot_ia.exception.EmailAlreadyRegisteredException;
+import com.laura.chatbot_ia.exception.InvalidCredentialsException;
 import com.laura.chatbot_ia.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,8 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.laura.chatbot_ia.dto.LoginRequest;
 // Permite generar el token de acceso.
 import com.laura.chatbot_ia.security.JwtService;
-// Permite responder con un error HTTP de credenciales no válidas.
-import org.springframework.security.authentication.BadCredentialsException;
 
 // Contiene la lógica de negocio relacionada con las cuentas de usuario.
 @Service
@@ -65,13 +64,15 @@ public class UserService {
         // Normaliza el email igual que en el registro.
         String email = request.email().trim().toLowerCase();
 
-        // Si no existe la cuenta, devuelve un error de credenciales.
+        // El mismo error cubre el email inexistente y la contraseña incorrecta.
+        // Así la respuesta no revela cuál de las dos comprobaciones ha fallado.
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas"));
+                .orElseThrow(() -> new InvalidCredentialsException(
+                        "Credenciales incorrectas"));
 
         // Compara la contraseña recibida con el hash BCrypt almacenado.
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Credenciales incorrectas");
+            throw new InvalidCredentialsException("Credenciales incorrectas");
         }
 
         // Solo genera el token después de validar las credenciales.

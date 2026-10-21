@@ -13,9 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 // DTOs para recibir credenciales y devolver el token.
 import com.laura.chatbot_ia.dto.LoginRequest;
 import com.laura.chatbot_ia.dto.LoginResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.server.ResponseStatusException;
 
 // Expone los endpoints HTTP relacionados con la autenticación.
 @RestController
@@ -42,21 +39,15 @@ public class AuthController {
     }
 
     // Autentica al usuario y devuelve un JWT si las credenciales son correctas.
+    // InvalidCredentialsException llega al manejador global, que responde 401
+    // con ApiError. No usamos ResponseStatusException: sendError reenviaría
+    // la petición a /error y Spring Security podría convertirla en 403.
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
 
-        try {
-            // El servicio verifica la contraseña y genera el token.
-            String token = userService.login(request);
+        String token = userService.login(request);
 
-            // Indica al cliente que el token es de tipo Bearer.
-            return new LoginResponse(token, "Bearer");
-
-        } catch (BadCredentialsException exception) {
-            // Devuelve el mismo error para email inexistente y contraseña incorrecta.
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Credenciales incorrectas");
-        }
+        // Indica al cliente que el token es de tipo Bearer.
+        return new LoginResponse(token, "Bearer");
     }
 }

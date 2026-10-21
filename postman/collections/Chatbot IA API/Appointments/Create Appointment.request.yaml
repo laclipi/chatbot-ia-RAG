@@ -1,23 +1,42 @@
 $kind: http-request
-url: http://localhost:8080/api/businesses/1/appointments
+description: |-
+  Crea una reserva en {{businessId}} para el servicio {{offeredServiceId}}.
+  Hereda el Bearer de la colección. Antes de enviar, calcula una fecha
+  siete días por delante para cumplir la validación de fecha futura.
+  Guarda appointmentId para confirmar y cancelar esa misma reserva.
+url: '{{baseUrl}}/api/businesses/{{businessId}}/appointments'
 method: POST
+headers:
+  - key: Content-Type
+    value: application/json
 body:
   type: json
-  content: "\r
+  content: |-
+    {
+      "offeredServiceId": {{offeredServiceId}},
+      "customerName": "Laura Test",
+      "customerEmail": "laura.test@example.com",
+      "customerPhone": "600123456",
+      "startAt": "{{appointmentStartAt}}"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      const start = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const local = new Date(start.getTime() - start.getTimezoneOffset() * 60000);
+      pm.collectionVariables.set("appointmentStartAt", local.toISOString().slice(0, 19));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 201 Created", function () {
+          pm.response.to.have.status(201);
+      });
 
-    {\r
-
-    \  \"offeredServiceId\": 3,\r
-
-    \  \"customerName\": \"Laura Test\",\r
-
-    \  \"customerEmail\": \"laura.test@example.com\",\r
-
-    \  \"customerPhone\": \"600123456\",\r
-
-    \  \"startAt\": \"2026-10-20T10:00:00\"\r
-
-    }\r
-
-    \  "
+      pm.test("Guarda la reserva creada", function () {
+          const body = pm.response.json();
+          pm.expect(body.id).to.be.a("number");
+          pm.expect(body.status).to.eql("PENDING");
+          pm.collectionVariables.set("appointmentId", String(body.id));
+      });
 order: 1000

@@ -1,13 +1,32 @@
 $kind: http-request
-url: http://localhost:8080/api/auth/register
+description: |-
+  Registra la cuenta de ejemplo de la colección.
+  Usa userEmail y userPassword, los mismos que Login User.
+  La primera ejecución responde HTTP 200. Si la cuenta ya existe, responde 409
+  y el login posterior sigue siendo válido.
+url: '{{baseUrl}}/api/auth/register'
 method: POST
+headers:
+  - key: Content-Type
+    value: application/json
 body:
   type: json
-  content: "{\r
+  content: |-
+    {
+      "email": "{{userEmail}}",
+      "password": "{{userPassword}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("HTTP 200 la primera vez, o 409 si la cuenta ya existe", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 409]);
+      });
 
-    \  \"email\": \"gestor.prueba@example.com\",\r
-
-    \  \"password\": \"PruebaSegura2026!\"\r
-
-    }"
+      pm.test("No devuelve la contraseña", function () {
+          const body = pm.response.json();
+          pm.expect(body).to.not.have.property("password");
+          pm.expect(body).to.not.have.property("passwordHash");
+      });
 order: 1000

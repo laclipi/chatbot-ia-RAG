@@ -1,4 +1,7 @@
 $kind: http-request
-url: http://localhost:8080/api/businesses/1/appointments/1/cancel
+description: |-
+  Cancela la reserva {{appointmentId}} después de confirmarla.
+  Hereda el Bearer de la colección.
+url: '{{baseUrl}}/api/businesses/{{businessId}}/appointments/{{appointmentId}}/cancel'
 method: PATCH
-order: 3000
+order: 4000
