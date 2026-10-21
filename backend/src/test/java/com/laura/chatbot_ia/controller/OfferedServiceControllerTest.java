@@ -4,17 +4,21 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -25,8 +29,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.laura.chatbot_ia.entity.OfferedService;
+import com.laura.chatbot_ia.exception.BusinessAccessDeniedException;
 import com.laura.chatbot_ia.exception.BusinessNotFoundException;
 import com.laura.chatbot_ia.exception.OfferedServiceNotFoundException;
+import com.laura.chatbot_ia.service.BusinessService;
 import com.laura.chatbot_ia.service.OfferedServiceManager;
 
 // Probamos las respuestas HTTP del controlador aislándolo del gestor de servicios.
@@ -39,6 +45,11 @@ class OfferedServiceControllerTest {
         @MockitoBean
         private OfferedServiceManager offeredServiceManager;
 
+        @MockitoBean
+        private BusinessService businessService;
+
+        private static final String AUTHENTICATED_EMAIL = "ana@clinica.es";
+
         // Comprobamos que el listado devuelve HTTP 200 y un array JSON vacío.
         @Test
         void findByBusinessIdReturnsOkAndJsonArray() throws Exception {
@@ -47,12 +58,16 @@ class OfferedServiceControllerTest {
                 when(offeredServiceManager.findByBusinessId(businessId))
                                 .thenReturn(List.of());
 
-                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId))
+                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
                                 .andExpect(jsonPath("$.length()").value(0));
 
-                verify(offeredServiceManager).findByBusinessId(businessId);
+                // La pertenencia se comprueba antes de leer el catálogo.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByBusinessId(businessId);
         }
 
         // Comprobamos que el listado traduce la entidad al DTO de respuesta.
@@ -70,7 +85,8 @@ class OfferedServiceControllerTest {
                 when(offeredServiceManager.findByBusinessId(businessId))
                                 .thenReturn(List.of(service));
 
-                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId))
+                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
                                 .andExpect(jsonPath("$.length()").value(1))
@@ -80,7 +96,10 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$[0].durationMinutes").value(30))
                                 .andExpect(jsonPath("$[0].active").value(true));
 
-                verify(offeredServiceManager).findByBusinessId(businessId);
+                // La pertenencia se comprueba antes de leer el catálogo.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByBusinessId(businessId);
         }
 
         // Comprobamos que un negocio inexistente devuelve HTTP 404 al listar servicios.
@@ -91,11 +110,17 @@ class OfferedServiceControllerTest {
                 when(offeredServiceManager.findByBusinessId(businessId))
                                 .thenThrow(new BusinessNotFoundException(businessId));
 
-                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId))
+                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.status").value(404))
                                 .andExpect(jsonPath("$.message").value("No existe un negocio con ID 99"))
                                 .andExpect(jsonPath("$.path").value("/api/businesses/99/services"));
+
+                // La pertenencia se comprueba antes de consultar el negocio inexistente.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByBusinessId(businessId);
         }
 
         // Comprobamos que crear un servicio devuelve HTTP 201 y los datos del DTO de
@@ -117,6 +142,7 @@ class OfferedServiceControllerTest {
 
                 // Enviamos solo los campos admitidos por OfferedServiceRequest.
                 mockMvc.perform(post("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {
@@ -136,7 +162,10 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.active").value(true));
 
                 // Verificamos que el controlador delega la creación al gestor.
-                verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
+                // La pertenencia se comprueba antes de crear el servicio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
         }
 
         // Comprobamos que crear un servicio para un negocio inexistente devuelve HTTP
@@ -149,6 +178,7 @@ class OfferedServiceControllerTest {
                                 .thenThrow(new BusinessNotFoundException(businessId));
 
                 mockMvc.perform(post("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {
@@ -162,6 +192,11 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.status").value(404))
                                 .andExpect(jsonPath("$.message").value("No existe un negocio con ID 99"))
                                 .andExpect(jsonPath("$.path").value("/api/businesses/99/services"));
+
+                // La pertenencia se comprueba antes de intentar crear el servicio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
         }
 
         // Comprobamos que el precio cero y la duración mínima superan la validación.
@@ -179,6 +214,7 @@ class OfferedServiceControllerTest {
                                 .thenReturn(createdService);
 
                 mockMvc.perform(post("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {
@@ -192,7 +228,10 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.price").value(0.00))
                                 .andExpect(jsonPath("$.durationMinutes").value(1));
 
-                verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
+                // La pertenencia se comprueba antes de crear el servicio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).create(eq(businessId), any(OfferedService.class));
         }
 
         // Verificamos que un servicio inexistente devuelve HTTP 404 y un ApiError.
@@ -209,7 +248,8 @@ class OfferedServiceControllerTest {
                                 // Consultamos el servicio con la misma estructura de ruta que PUT y DELETE.
                                 "/api/businesses/{businessId}/services/{serviceId}",
                                 businessId,
-                                serviceId))
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.status").value(404))
                                 .andExpect(jsonPath("$.message")
@@ -217,6 +257,11 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.path")
                                                 // La ruta esperada debe coincidir con la nueva ruta del controlador.
                                                 .value("/api/businesses/1/services/99"));
+
+                // La pertenencia se comprueba antes de buscar el servicio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByIdAndBusinessId(serviceId, businessId);
         }
 
         // Comprobamos que un nombre en blanco devuelve HTTP 400 por la validación del
@@ -420,6 +465,7 @@ class OfferedServiceControllerTest {
                                 "/api/businesses/{businessId}/services/{serviceId}",
                                 businessId,
                                 serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {
@@ -437,8 +483,10 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.durationMinutes").value(45))
                                 .andExpect(jsonPath("$.active").value(true));
 
-                // Verificamos que el controlador delega la actualización al gestor.
-                verify(offeredServiceManager).update(
+                // La pertenencia se comprueba antes de modificar el servicio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).update(
                                 eq(businessId),
                                 eq(serviceId),
                                 any(OfferedService.class));
@@ -460,6 +508,7 @@ class OfferedServiceControllerTest {
                                 "/api/businesses/{businessId}/services/{serviceId}",
                                 businessId,
                                 serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {
@@ -473,6 +522,14 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.message")
                                                 .value("No existe un servicio con ID 99 para el negocio con ID 1"))
                                 .andExpect(jsonPath("$.path").value("/api/businesses/1/services/99"));
+
+                // La pertenencia se comprueba antes de intentar la actualización.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).update(
+                                eq(businessId),
+                                eq(serviceId),
+                                any(OfferedService.class));
         }
 
         // Comprobamos que eliminar un servicio devuelve HTTP 204 sin cuerpo.
@@ -487,11 +544,15 @@ class OfferedServiceControllerTest {
                 mockMvc.perform(delete(
                                 "/api/businesses/{businessId}/services/{serviceId}",
                                 businessId,
-                                serviceId))
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isNoContent())
                                 .andExpect(content().string(""));
 
-                verify(offeredServiceManager).delete(businessId, serviceId);
+                // La pertenencia se comprueba antes de eliminar el servicio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).delete(businessId, serviceId);
         }
 
         // Comprobamos que eliminar un servicio inexistente devuelve HTTP 404.
@@ -507,12 +568,18 @@ class OfferedServiceControllerTest {
                 mockMvc.perform(delete(
                                 "/api/businesses/{businessId}/services/{serviceId}",
                                 businessId,
-                                serviceId))
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.status").value(404))
                                 .andExpect(jsonPath("$.message")
                                                 .value("No existe un servicio con ID 99 para el negocio con ID 1"))
                                 .andExpect(jsonPath("$.path").value("/api/businesses/1/services/99"));
+
+                // La pertenencia se comprueba antes de intentar la eliminación.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).delete(businessId, serviceId);
         }
 
         // Comprobamos que desactivar un servicio devuelve HTTP 200 y active=false.
@@ -537,13 +604,17 @@ class OfferedServiceControllerTest {
                                 "/api/businesses/{businessId}/services/{serviceId}/active",
                                 businessId,
                                 serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .param("active", "false"))
                                 .andExpect(status().isOk())
 
                                 .andExpect(jsonPath("$.name").value("Consulta inicial"))
                                 .andExpect(jsonPath("$.active").value(false));
 
-                verify(offeredServiceManager)
+                // La pertenencia se comprueba antes de cambiar el estado.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager)
                                 .changeActiveStatus(businessId, serviceId, false);
         }
 
@@ -561,6 +632,7 @@ class OfferedServiceControllerTest {
                                 "/api/businesses/{businessId}/services/{serviceId}/active",
                                 businessId,
                                 serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
                                 .param("active", "false"))
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.status").value(404))
@@ -568,6 +640,11 @@ class OfferedServiceControllerTest {
                                                 .value("No existe un servicio con ID 99 para el negocio con ID 1"))
                                 .andExpect(jsonPath("$.path")
                                                 .value("/api/businesses/1/services/99/active"));
+
+                // La pertenencia se comprueba antes de intentar el cambio de estado.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).changeActiveStatus(businessId, serviceId, false);
         }
 
         // Comprobamos que la ausencia del parámetro active devuelve HTTP 400.
@@ -601,7 +678,8 @@ class OfferedServiceControllerTest {
 
                 mockMvc.perform(get(
                                 "/api/businesses/{businessId}/services/active",
-                                businessId))
+                                businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
                                 .andExpect(jsonPath("$.length()").value(1))
@@ -609,7 +687,10 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$[0].name").value("Consulta inicial"))
                                 .andExpect(jsonPath("$[0].active").value(true));
 
-                verify(offeredServiceManager).findByBusinessId(businessId);
+                // La pertenencia se comprueba antes de leer el catálogo.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByBusinessId(businessId);
         }
 
         // Comprobamos que los servicios activos de un negocio inexistente devuelven
@@ -623,11 +704,17 @@ class OfferedServiceControllerTest {
 
                 mockMvc.perform(get(
                                 "/api/businesses/{businessId}/services/active",
-                                businessId))
+                                businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isNotFound())
                                 .andExpect(jsonPath("$.status").value(404))
                                 .andExpect(jsonPath("$.message").value("No existe un negocio con ID 99"))
                                 .andExpect(jsonPath("$.path").value("/api/businesses/99/services/active"));
+
+                // La pertenencia se comprueba antes de consultar los servicios activos.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByBusinessId(businessId);
         }
 
         // Comprobamos que consultar un servicio devuelve HTTP 200 y sus datos mediante
@@ -653,7 +740,8 @@ class OfferedServiceControllerTest {
                                 // Consultamos el servicio con la ruta unificada del controlador.
                                 "/api/businesses/{businessId}/services/{serviceId}",
                                 businessId,
-                                serviceId))
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
                                 .andExpect(status().isOk())
 
                                 .andExpect(jsonPath("$.name").value("Consulta inicial"))
@@ -662,7 +750,191 @@ class OfferedServiceControllerTest {
                                 .andExpect(jsonPath("$.durationMinutes").value(30))
                                 .andExpect(jsonPath("$.active").value(true));
 
-                verify(offeredServiceManager).findByIdAndBusinessId(serviceId, businessId);
+                // La pertenencia se comprueba antes de leer el servicio de este negocio.
+                InOrder order = inOrder(businessService, offeredServiceManager);
+                order.verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                order.verify(offeredServiceManager).findByIdAndBusinessId(serviceId, businessId);
+        }
+
+        // Comprobamos que listar servicios de otro negocio devuelve HTTP 403 sin leerlos.
+        @Test
+        void findByBusinessIdReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                denyMembership(businessId);
+
+                mockMvc.perform(get("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Comprobamos que crear un servicio en otro negocio devuelve HTTP 403 sin guardarlo.
+        @Test
+        void createReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                denyMembership(businessId);
+
+                mockMvc.perform(post("/api/businesses/{businessId}/services", businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "name": "Consulta inicial",
+                                                  "description": "Primera consulta",
+                                                  "price": 35.00,
+                                                  "durationMinutes": 30
+                                                }
+                                                """))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Comprobamos que consultar un servicio de otro negocio devuelve HTTP 403.
+        @Test
+        void findByIdAndBusinessIdReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                Long serviceId = 10L;
+                denyMembership(businessId);
+
+                mockMvc.perform(get(
+                                "/api/businesses/{businessId}/services/{serviceId}",
+                                businessId,
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services/10"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Comprobamos que editar un servicio de otro negocio devuelve HTTP 403 sin modificarlo.
+        @Test
+        void updateReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                Long serviceId = 10L;
+                denyMembership(businessId);
+
+                mockMvc.perform(put(
+                                "/api/businesses/{businessId}/services/{serviceId}",
+                                businessId,
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "name": "Consulta avanzada",
+                                                  "description": "Consulta de seguimiento",
+                                                  "price": 50.00,
+                                                  "durationMinutes": 45
+                                                }
+                                                """))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services/10"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Comprobamos que eliminar un servicio de otro negocio devuelve HTTP 403 sin borrarlo.
+        @Test
+        void deleteReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                Long serviceId = 10L;
+                denyMembership(businessId);
+
+                mockMvc.perform(delete(
+                                "/api/businesses/{businessId}/services/{serviceId}",
+                                businessId,
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services/10"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Comprobamos que activar o desactivar un servicio de otro negocio devuelve HTTP 403.
+        @Test
+        void changeActiveStatusReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                Long serviceId = 10L;
+                denyMembership(businessId);
+
+                mockMvc.perform(patch(
+                                "/api/businesses/{businessId}/services/{serviceId}/active",
+                                businessId,
+                                serviceId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL))
+                                .param("active", "false"))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services/10/active"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Comprobamos que listar los servicios activos de otro negocio devuelve HTTP 403.
+        @Test
+        void findActiveByBusinessIdReturnsForbiddenWhenUserIsNotMember() throws Exception {
+                Long businessId = 2L;
+                denyMembership(businessId);
+
+                mockMvc.perform(get(
+                                "/api/businesses/{businessId}/services/active",
+                                businessId)
+                                .with(authenticatedUser(AUTHENTICATED_EMAIL)))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.status").value(403))
+                                .andExpect(jsonPath("$.error").value("Forbidden"))
+                                .andExpect(jsonPath("$.message").value("No perteneces a ese negocio"))
+                                .andExpect(jsonPath("$.path").value("/api/businesses/2/services/active"));
+
+                verify(businessService).requireMembership(AUTHENTICATED_EMAIL, businessId);
+                verifyNoInteractions(offeredServiceManager);
+        }
+
+        // Simula que el usuario autenticado no pertenece al negocio de la ruta.
+        private void denyMembership(Long businessId) {
+                when(businessService.requireMembership(AUTHENTICATED_EMAIL, businessId))
+                                .thenThrow(new BusinessAccessDeniedException("No perteneces a ese negocio"));
+        }
+
+        // Deja en la petición el mismo principal que el filtro JWT guarda al validar el token.
+        private RequestPostProcessor authenticatedUser(String email) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                email,
+                                null,
+                                List.of());
+                return request -> {
+                        request.setUserPrincipal(authentication);
+                        return request;
+                };
         }
 
 }

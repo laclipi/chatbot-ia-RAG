@@ -4,9 +4,13 @@ package com.laura.chatbot_ia.controller;
 import com.laura.chatbot_ia.dto.OfferedServiceRequest;
 import com.laura.chatbot_ia.dto.OfferedServiceResponse;
 import com.laura.chatbot_ia.entity.OfferedService;
+import com.laura.chatbot_ia.exception.AuthenticatedUserNotFoundException;
+import com.laura.chatbot_ia.service.BusinessService;
 import com.laura.chatbot_ia.service.OfferedServiceManager;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,10 +20,13 @@ import java.util.List;
 public class OfferedServiceController {
 
     private final OfferedServiceManager offeredServiceManager;
+    private final BusinessService businessService;
 
     public OfferedServiceController(
-            OfferedServiceManager offeredServiceManager) {
+            OfferedServiceManager offeredServiceManager,
+            BusinessService businessService) {
         this.offeredServiceManager = offeredServiceManager;
+        this.businessService = businessService;
     }
 
     // Lista los servicios asociados al negocio indicado.
@@ -28,7 +35,11 @@ public class OfferedServiceController {
     // JPA.
     @GetMapping
     public List<OfferedServiceResponse> findByBusinessId(
-            @PathVariable Long businessId) {
+            @PathVariable Long businessId,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de leer el catálogo de este negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // Recuperamos los servicios aplicando las comprobaciones de la capa de
         // servicio.
@@ -57,7 +68,11 @@ public class OfferedServiceController {
     @ResponseStatus(HttpStatus.CREATED)
     public OfferedServiceResponse create(
             @PathVariable Long businessId,
-            @Valid @RequestBody OfferedServiceRequest request) {
+            @Valid @RequestBody OfferedServiceRequest request,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de crear un servicio en este negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // Construimos la entidad a partir de los campos permitidos en la petición.
         OfferedService offeredService = new OfferedService();
@@ -87,7 +102,12 @@ public class OfferedServiceController {
     @GetMapping("/{serviceId}")
     public OfferedServiceResponse findByIdAndBusinessId(
             @PathVariable Long businessId,
-            @PathVariable Long serviceId) {
+            @PathVariable Long serviceId,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de leer el servicio de este negocio.
+        // El gestor exige además que el serviceId pertenezca a ese mismo negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // Recuperamos la entidad aplicando las comprobaciones de pertenencia al
         // negocio.
@@ -115,7 +135,12 @@ public class OfferedServiceController {
     public OfferedServiceResponse update(
             @PathVariable Long businessId,
             @PathVariable Long serviceId,
-            @Valid @RequestBody OfferedServiceRequest request) {
+            @Valid @RequestBody OfferedServiceRequest request,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de modificar un servicio de este negocio.
+        // El gestor exige además que el serviceId pertenezca a ese mismo negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // Construimos una entidad con los campos que el cliente puede modificar.
         OfferedService updatedService = new OfferedService();
@@ -148,7 +173,12 @@ public class OfferedServiceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @PathVariable Long businessId,
-            @PathVariable Long serviceId) {
+            @PathVariable Long serviceId,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de eliminar un servicio de este negocio.
+        // El gestor exige además que el serviceId pertenezca a ese mismo negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // Delegamos la eliminación y las comprobaciones en la capa de servicio.
         offeredServiceManager.delete(businessId, serviceId);
@@ -162,7 +192,13 @@ public class OfferedServiceController {
     public OfferedServiceResponse changeActiveStatus(
             @PathVariable Long businessId,
             @PathVariable Long serviceId,
-            @RequestParam boolean active) {
+            @RequestParam boolean active,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de cambiar el estado de un servicio
+        // de este negocio.
+        // El gestor exige además que el serviceId pertenezca a ese mismo negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // La capa de servicio comprueba la pertenencia al negocio y actualiza el
         // estado.
@@ -189,7 +225,12 @@ public class OfferedServiceController {
     // API.
     @GetMapping("/active")
     public List<OfferedServiceResponse> findActiveByBusinessId(
-            @PathVariable Long businessId) {
+            @PathVariable Long businessId,
+            Authentication authentication) {
+
+        // La pertenencia se comprueba antes de leer los servicios activos de este
+        // negocio.
+        businessService.requireMembership(authenticatedEmail(authentication), businessId);
 
         // Recuperamos los servicios activos mediante la lógica existente de la capa de
         // servicio.
@@ -209,6 +250,20 @@ public class OfferedServiceController {
                     return response;
                 })
                 .toList();
+    }
+
+    // El filtro JWT guarda el email del token como principal de la petición.
+    // Una autenticación ausente o anónima no identifica a un usuario de la aplicación.
+    private String authenticatedEmail(Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AuthenticatedUserNotFoundException();
+        }
+
+        return authentication.getName();
     }
 
 }
