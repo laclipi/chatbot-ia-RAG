@@ -1,4 +1,5 @@
 $kind: http-request
+description: Chat público. No envía token ni exige pertenencia al negocio.
 url: http://localhost:8080/api/businesses/1/chat
 method: POST
 body:

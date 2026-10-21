@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-    // Permite registrar e iniciar sesión sin token y protege las demás rutas.
+    // Abre el registro, el login y el chat público, y protege las demás rutas.
     // Configura la API para autenticar cada petición mediante JWT, sin sesiones.
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -29,12 +29,16 @@ public class SecurityConfig {
         http.sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // Permite el registro y el login; exige autenticación para las demás rutas.
+        // Registrar e iniciar sesión no exige un token previo.
+        // El chat identifica el negocio en la ruta y atiende a cualquier cliente.
+        // El resto de rutas, incluidas las demás de /api/businesses, exigen token.
         http.authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                         HttpMethod.POST,
                         "/api/auth/register",
                         "/api/auth/login")
+                .permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/businesses/*/chat")
                 .permitAll()
                 .anyRequest().authenticated());
 

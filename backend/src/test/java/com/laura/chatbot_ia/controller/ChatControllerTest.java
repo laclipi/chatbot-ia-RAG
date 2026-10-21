@@ -2,6 +2,7 @@
 package com.laura.chatbot_ia.controller;
 
 import com.laura.chatbot_ia.dto.ChatRequest;
+import com.laura.chatbot_ia.exception.BusinessNotFoundException;
 import com.laura.chatbot_ia.service.ChatService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,5 +57,39 @@ class ChatControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"message\":\"   \"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // Un negocio inexistente no tiene catálogo público y responde HTTP 404.
+    @Test
+    void chatReturnsNotFoundWhenBusinessDoesNotExist() throws Exception {
+        when(chatService.answer(eq(99L), anyString()))
+                .thenThrow(new BusinessNotFoundException(99L));
+
+        mockMvc.perform(post("/api/businesses/99/chat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"¿Qué servicios ofrecéis?\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("No existe un negocio con ID 99"))
+                .andExpect(jsonPath("$.path").value("/api/businesses/99/chat"));
+
+        verify(chatService).answer(99L, "¿Qué servicios ofrecéis?");
+    }
+
+    // Un negocio inactivo tampoco publica su catálogo: el servicio usa el mismo 404.
+    @Test
+    void chatReturnsNotFoundWhenBusinessIsInactive() throws Exception {
+        when(chatService.answer(eq(4L), anyString()))
+                .thenThrow(new BusinessNotFoundException(4L));
+
+        mockMvc.perform(post("/api/businesses/4/chat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"¿Qué servicios ofrecéis?\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("No existe un negocio con ID 4"))
+                .andExpect(jsonPath("$.path").value("/api/businesses/4/chat"));
+
+        verify(chatService).answer(4L, "¿Qué servicios ofrecéis?");
     }
 }

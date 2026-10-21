@@ -22,9 +22,10 @@ public class ChatService {
         this.chatResponseEngine = chatResponseEngine;
     }
 
-    // Obtiene los servicios del negocio solicitado y delega la respuesta al motor.
+    // Carga el catálogo público de ese negocio y delega la respuesta al motor.
+    // No comprueba la pertenencia: el cliente del chat no es un usuario del negocio.
     public String answer(Long businessId, String message) {
-        List<OfferedService> services = offeredServiceManager.findByBusinessId(businessId);
+        List<OfferedService> services = offeredServiceManager.findActiveCatalogForChat(businessId);
 
         return chatResponseEngine.answer(message, services);
     }

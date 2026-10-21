@@ -1,7 +1,12 @@
 $kind: collection
 description: |-
   Pruebas de la API de Chatbot IA, derivadas de los controladores REST.
-  Cubre Health, negocios y servicios ofrecidos. El backend no define registro, login ni JWT.
+  Las peticiones administrativas heredan el token {{accessToken}} que guarda el login.
+  La carpeta Chat no envía token: el cliente público no necesita cuenta ni pertenencia.
 variables:
   baseUrl: http://localhost:8080
   accessToken: ""
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"

@@ -30,7 +30,23 @@ public class OfferedServiceManager {
             throw new BusinessNotFoundException(businessId);
         }
 
-        // Devolvemos solo los servicios activos para el catálogo del chatbot.
+        // El listado administrativo sigue devolviendo solo los servicios activos.
+        // No exige que el negocio esté activo: esa comprobación es exclusiva del chat.
+        return offeredServiceRepository.findByBusinessIdAndActiveTrue(businessId);
+    }
+
+    // Catálogo del chat público.
+    // El negocio tiene que existir y estar activo; un negocio inactivo responde
+    // como si no existiera, para no publicar su catálogo.
+    // La consulta solo incluye los servicios activos de ese negocio.
+    public List<OfferedService> findActiveCatalogForChat(Long businessId) {
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new BusinessNotFoundException(businessId));
+
+        if (!business.isActive()) {
+            throw new BusinessNotFoundException(businessId);
+        }
+
         return offeredServiceRepository.findByBusinessIdAndActiveTrue(businessId);
     }
 

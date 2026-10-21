@@ -1,2 +1,8 @@
 $kind: collection
+name: Chat
+description: |-
+  Chat público de un negocio. Estas peticiones no envían token.
+  El cliente no necesita cuenta ni pertenencia; la ruta indica el negocio.
+auth:
+  type: noauth
 order: 5000
